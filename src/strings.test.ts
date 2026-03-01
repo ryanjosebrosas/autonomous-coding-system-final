@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { reverse } from './strings';
+import { reverse, capitalize } from './strings';
 
 describe('reverse', () => {
   it('should reverse a string', () => {
@@ -20,5 +20,27 @@ describe('reverse', () => {
 
   it('should handle string with spaces', () => {
     expect(reverse('hello world')).toBe('dlrow olleh');
+  });
+});
+
+describe('capitalize', () => {
+  it('should capitalize first letter of each word', () => {
+    expect(capitalize('hello world')).toBe('Hello World');
+  });
+
+  it('should return empty string for empty input', () => {
+    expect(capitalize('')).toBe('');
+  });
+
+  it('should handle single word', () => {
+    expect(capitalize('hello')).toBe('Hello');
+  });
+
+  it('should handle already capitalized string', () => {
+    expect(capitalize('Hello World')).toBe('Hello World');
+  });
+
+  it('should handle mixed case string', () => {
+    expect(capitalize('hElLo wOrLd')).toBe('HElLo WOrLd');
   });
 });

@@ -225,60 +225,50 @@ Print progress dashboard:
      "Pillar: {pillar name and gate criteria from PILLARS.md}"
    ```
 
-   Then dispatch sequentially — `/prime` first to load context, then `/planning` with full spec details:
+   Then dispatch to a new session — `/prime` first to load context, then `/planning` with full spec details:
 
-   **Call 1: Prime the session**
+   **Planning session (direct API):**
    ```
-   result1 = dispatch({
-     mode: "command",
-     command: "prime",
-     prompt: "",
-     taskType: "planning",
-     description: "Prime for {spec-name}",
-   })
-   // Extract from result1 output:
-   //   **Session ID**: `{id}`        → sessionId
-   //   **Model**: LABEL (`prov/mod`) → provider, model
-   sessionId = extractSessionId(result1)
-   provider = extractProvider(result1)   // e.g., "bailian-coding-plan-test"
-   model = extractModel(result1)         // e.g., "qwen3-max-2026-01-23"
-   ```
+   // Step A: Create a fresh session for planning
+   session = POST http://127.0.0.1:4096/session
+     body: { "title": "Planning: {spec-name}" }
+   sessionId = session.id
 
-   **Call 2: Run planning in the SAME session (explicit model — no cascade)**
-   ```
-   result2 = dispatch({
-     mode: "command",
-     command: "planning",
-     prompt: "{spec-name} --auto-approve\n\nSpec Context:\n{specContext}",
-     provider: provider,   // from Call 1 — ensures same model handles both commands
-     model: model,         // from Call 1 — bypasses cascade (no redundant ping)
-     sessionId: sessionId, // from Call 1 — reuses the primed session
-     description: "Plan {spec-name}",
-   })
+   // Step B: Prime the session (load project context)
+   POST http://127.0.0.1:4096/session/{sessionId}/command
+     body: {
+       "command": "prime",
+       "arguments": "",
+       "model": "{planning-model}"  // from model-strategy.md T0 or T1c
+     }
+
+   // Step C: Run /planning in the SAME session (context carries over)
+   POST http://127.0.0.1:4096/session/{sessionId}/command
+     body: {
+       "command": "planning",
+       "arguments": "{spec-name} --auto-approve",
+       "model": "{planning-model}"  // same model as Step B
+     }
    ```
 
-   **Why explicit provider/model**: Call 1 already resolved the cascade and found a working
-   model. Passing it explicitly in Call 2 avoids a redundant cascade resolution ping,
-   eliminates the risk of model mismatch, and saves ~15s latency.
+   **Model selection**: Use the planning model from model-strategy.md:
+   - Primary: `bailian-coding-plan-test/qwen3-max-2026-01-23` (T0 planning)
+   - Fallback: `bailian-coding-plan-test/qwen3.5-plus` (T1c)
+   - Last resort: `anthropic/claude-opus-4-5` (T0 paid)
 
-   The `--auto-approve` flag skips the interactive approval gate in `/planning` Phase 4 — the spec was already approved via BUILD_ORDER.
+   **Why direct API**: The dispatch tool's `sessionId` parameter may not be visible due to stale MCP cache. Direct API calls bypass this — `POST /session/{id}/command` always uses the correct session.
 
-   **Why sequential dispatch**: A single prompt with "Run /prime first, then /planning..." is unreliable — models skip steps or truncate. Two explicit command dispatches with shared sessionId ensures both commands run in order with accumulated context. Call 2 passes the exact provider/model from Call 1 to guarantee the same model handles the full session.
+   **Why same session for /prime + /planning**: `/prime` loads project context (git state, build state, pending work). `/planning` needs this context to produce quality plans. Same session = accumulated context.
 
-   **Why spec context inline**: Prior testing showed plan quality drops when the `/planning` model must discover spec details itself. Passing acceptance criteria, files touched, and patterns inline ensures 700+ line plans.
+   **Why `--auto-approve`**: The spec was already approved via BUILD_ORDER. Skips interactive questions in all phases.
 
-   **If `sessionId` is not a visible dispatch parameter:**
-   The MCP tool schema is stale (cached at session start before sessionId was added to dispatch.ts).
-   Fix: restart `opencode serve`, then start a NEW Claude session — the fresh session picks up the updated tool schema with `sessionId`. The current session cannot use sessionId regardless of what's in dispatch.ts.
+   **If direct API unavailable** (no server running):
+   Write the plan directly using the `/planning` methodology inline.
 
-   **If dispatch unavailable:**
-   Write the plan directly using the `/planning` methodology. The primary model gathers context, runs discovery, and produces the structured plan inline.
-
-   **If dispatch fails (either call):**
-   - If Call 1 (`/prime`) fails: Fall back to inline planning — the session can't be primed.
-   - If Call 2 (`/planning`) fails: Retry once with a new session (Call 1 + Call 2). If retry also fails, fall back to inline planning.
+   **If either command fails:**
+   - If `/prime` fails: Retry once, then fall back to inline planning.
+   - If `/planning` fails: Retry with fallback model. If all fail, fall back to inline planning.
    - Log: "Dispatch failed for planning {spec-name} — falling back to inline planning."
-   - Inline planning uses the same spec context gathered in step 1 — nothing is lost.
 
    - `plan.md` MUST be 700-1000 lines — this is a hard requirement
    - Each `task-{N}.md` brief MUST be self-contained and executable without reading `plan.md`
@@ -294,9 +284,9 @@ Print progress dashboard:
 #### Master + Sub-Plan Mode (Exception)
 
 4. **Write or dispatch master plan:**
-   Same sequential dispatch pattern as Task Brief Mode above, but pass `--master` flag in the planning prompt:
+   Same direct API pattern as Task Brief Mode above (create session → `/prime` → `/planning`), but pass `--master` flag in the planning arguments:
    ```
-   prompt: "{spec-name} --auto-approve --master\n\nSpec Context:\n{specContext}"
+   "arguments": "{spec-name} --auto-approve --master"
    ```
    The master plan defines phases, task groupings, phase gates.
    - Master plan MUST be ~400-600 lines
@@ -395,50 +385,44 @@ This is the rollback point. If implementation fails, `git reset --hard HEAD` to 
 
 1. **Dispatch or execute one brief:**
 
-   **If dispatch available — use sequential dispatch (two calls, same session):**
+   **If server available — dispatch to a NEW session (separate from planning):**
 
-   **Call 1: Prime the session**
+   **Execution session (direct API):**
    ```
-   result1 = dispatch({
-     mode: "command",
-     command: "prime",
-     prompt: " ",
-     taskType: "execution",
-     description: "Prime for {spec-name} execution",
-   })
-   // Extract from result1 output:
-   //   **Session ID**: `{id}`        → sessionId
-   //   **Model**: LABEL (`prov/mod`) → provider, model
-   sessionId = extractSessionId(result1)
-   provider = extractProvider(result1)
-   model = extractModel(result1)
-   ```
+   // Step A: Create a fresh session for execution
+   session = POST http://127.0.0.1:4096/session
+     body: { "title": "Execute: {spec-name}" }
+   sessionId = session.id
 
-   **Call 2: Execute in the SAME session (explicit model — no routing)**
-   ```
-   result2 = dispatch({
-     mode: "command",
-     command: "execute",
-     prompt: ".agents/features/{spec-name}/plan.md",
-     provider: provider,   // from Call 1 — ensures same model handles both
-     model: model,         // from Call 1 — bypasses routing table
-     sessionId: sessionId, // from Call 1 — reuses the primed session
-     description: "Execute {spec-name}",
-     timeout: 0,           // no timeout — execution runs until done
-   })
+   // Step B: Prime the session
+   POST http://127.0.0.1:4096/session/{sessionId}/command
+     body: {
+       "command": "prime",
+       "arguments": "",
+       "model": "{execution-model}"  // from model-strategy.md T1c
+     }
+
+   // Step C: Execute in the SAME session (context carries over)
+   POST http://127.0.0.1:4096/session/{sessionId}/command
+     body: {
+       "command": "execute",
+       "arguments": ".agents/features/{spec-name}/plan.md",
+       "model": "{execution-model}"  // same model as Step B
+     }
    ```
 
-   **Why two calls**: A single prompt ("Run /prime then /execute...") is unreliable — models skip steps. Two explicit command dispatches with shared sessionId ensures both run in order with accumulated context.
+   **Model selection**: Use the execution model from model-strategy.md:
+   - Primary: `bailian-coding-plan-test/qwen3.5-plus` (T1c execution workhorse)
+   - Fallback: `bailian-coding-plan-test/qwen3-coder-next` (T1a fast)
 
-   **If `sessionId` is not a visible dispatch parameter:**
-   The MCP tool schema is stale. Fix: restart `opencode serve` + start a new Claude session. Fall back to inline execution for the current session.
+   **Why a NEW session** (not the planning session): Each phase gets its own context window per AGENTS.md session model. Planning context (discovery, research) would pollute execution context. Fresh `/prime` gives the execution model clean project state.
 
-   **If dispatch unavailable:**
+   **If server unavailable:**
    Run `/execute .agents/features/{spec-name}/plan.md` inline. `/execute` auto-detects the next undone brief by scanning for `task-{N}.done.md` files.
 
-   **If dispatch fails (either call):**
-   - If Call 1 (`/prime`) fails: Fall back to inline execution.
-   - If Call 2 (`/execute`) fails: Retry once with a new session (Call 1 + Call 2). If retry also fails, fall back to inline execution.
+   **If either command fails:**
+   - If `/prime` fails: Fall back to inline execution.
+   - If `/execute` fails: Retry once with new session. If still fails, fall back to inline execution.
    - Log: "Dispatch failed for execution {spec-name} — falling back to inline execution."
 
 2. **Check completion:**
@@ -458,45 +442,44 @@ This is the rollback point. If implementation fails, `git reset --hard HEAD` to 
 
 1. **Dispatch or execute one phase:**
 
-   **If dispatch available — use sequential dispatch (two calls, same session):**
+   **If server available — dispatch to a NEW session (separate from planning):**
 
-   **Call 1: Prime the session**
+   **Execution session (direct API):**
    ```
-   result1 = dispatch({
-     mode: "command",
-     command: "prime",
-     prompt: " ",
-     taskType: "execution",
-     description: "Prime for {spec-name} phase execution",
-   })
-   sessionId = extractSessionId(result1)
-   provider = extractProvider(result1)
-   model = extractModel(result1)
-   ```
+   // Step A: Create a fresh session for phase execution
+   session = POST http://127.0.0.1:4096/session
+     body: { "title": "Execute: {spec-name} phase" }
+   sessionId = session.id
 
-   **Call 2: Execute in the SAME session (explicit model — no routing)**
-   ```
-   result2 = dispatch({
-     mode: "command",
-     command: "execute",
-     prompt: ".agents/features/{spec-name}/plan-master.md",
-     provider: provider,
-     model: model,
-     sessionId: sessionId,
-     description: "Execute {spec-name} phase",
-     timeout: 0,
-   })
+   // Step B: Prime the session
+   POST http://127.0.0.1:4096/session/{sessionId}/command
+     body: {
+       "command": "prime",
+       "arguments": "",
+       "model": "{execution-model}"  // from model-strategy.md T1c
+     }
+
+   // Step C: Execute phase in the SAME session (context carries over)
+   POST http://127.0.0.1:4096/session/{sessionId}/command
+     body: {
+       "command": "execute",
+       "arguments": ".agents/features/{spec-name}/plan-master.md",
+       "model": "{execution-model}"  // same model as Step B
+     }
    ```
 
-   **If `sessionId` is not a visible dispatch parameter:**
-   The MCP tool schema is stale. Fix: restart `opencode serve` + start a new Claude session. Fall back to inline execution for the current session.
+   **Model selection**: Use the execution model from model-strategy.md:
+   - Primary: `bailian-coding-plan-test/qwen3.5-plus` (T1c execution workhorse)
+   - Fallback: `bailian-coding-plan-test/qwen3-coder-next` (T1a fast)
 
-   **If dispatch unavailable:**
+   **Why a NEW session**: Same as Task Brief Mode — each phase gets its own context window. Fresh `/prime` gives clean project state.
+
+   **If server unavailable:**
    Run `/execute .agents/features/{spec-name}/plan-master.md` inline. `/execute` auto-detects the next undone phase by scanning for `plan-phase-{N}.done.md` files.
 
-   **If dispatch fails (either call):**
-   - If Call 1 (`/prime`) fails: Fall back to inline execution.
-   - If Call 2 (`/execute`) fails: Retry once with a new session (Call 1 + Call 2). If retry also fails, fall back to inline execution.
+   **If either command fails:**
+   - If `/prime` fails: Fall back to inline execution.
+   - If `/execute` fails: Retry once with new session. If still fails, fall back to inline execution.
    - Log: "Dispatch failed for execution {spec-name} — falling back to inline execution."
 
 2. **Check completion:**

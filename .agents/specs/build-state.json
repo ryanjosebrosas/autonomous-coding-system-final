@@ -1,11 +1,11 @@
 {
-  "lastSpec": "string-reverse",
-  "completed": ["P1-01"],
+  "lastSpec": "string-capitalize",
+  "completed": ["P1-01", "P1-02"],
   "currentPillar": 1,
   "totalSpecs": 2,
-  "currentSpec": "string-capitalize",
-  "currentStep": "planning",
-  "patternsEstablished": ["vitest-testing", "function-export-pattern"],
+  "currentSpec": null,
+  "currentStep": "complete",
+  "patternsEstablished": ["vitest-testing", "function-export-pattern", "regex-capitalization"],
   "decisionsLog": [
     {
       "spec": "P1-01",
@@ -16,6 +16,11 @@
       "spec": "P1-01",
       "decision": "split-reverse-join pattern for string reversal",
       "rationale": "Idiomatic JavaScript/TypeScript approach"
+    },
+    {
+      "spec": "P1-02",
+      "decision": "regex pattern /\\b\\w/g for capitalization",
+      "rationale": "Preserves whitespace exactly, single-pass, MDN recommended"
     }
   ]
 }

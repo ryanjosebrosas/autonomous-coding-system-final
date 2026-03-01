@@ -9,3 +9,12 @@
 export function reverse(str: string): string {
   return str.split('').reverse().join('');
 }
+
+/**
+ * Capitalizes the first letter of each word in a string.
+ * @param str - The string to capitalize
+ * @returns The capitalized string
+ */
+export function capitalize(str: string): string {
+  return str.replace(/\b\w/g, (char) => char.toUpperCase());
+}
