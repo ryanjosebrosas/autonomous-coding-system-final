@@ -169,16 +169,192 @@ If dispatch unavailable, use Archon RAG or web search.
 
 ---
 
-## Phase 3: Design (Strategic Decisions)
+## Phase 3: Design (Structured Reasoning)
 
-Discuss the implementation approach with the user:
+Phase 3 is where raw discovery turns into architectural decisions. This is the most important phase — every downstream artifact (plan, task briefs, code) depends on the quality of thinking here.
 
-1. **Propose the approach** — "Here's how I'd build this: {approach}. The key decision is {X}."
-2. **Present alternatives** — if multiple valid approaches exist, show 2-3 options with tradeoffs
-3. **Confirm the direction** — "Lock in approach A? Or should we explore B more?"
+**Do NOT skip sub-phases.** Each produces a structured output block that subsequent phases reference. The model must show its reasoning at each step, not jump from research to conclusions.
 
-For non-trivial architecture decisions, suggest council:
-- "This has multiple valid approaches. Want to run `/council` to get multi-model input?"
+### 3a. Synthesize
+
+Take everything from Phase 1 (user intent) + Phase 2 (research findings) and distill it into a clear picture. Print this output block:
+
+```
+SYNTHESIS
+=========
+What we're building:
+  {1 paragraph — precise, no fluff. What this feature/spec does and why it matters.}
+
+What we learned from research:
+  Codebase findings:
+    - {key pattern from research-codebase agent}
+    - {integration point discovered}
+    - {gotcha or inconsistency found}
+  External findings:
+    - {relevant docs/best practice from research-external agent}
+    - {pitfall or compatibility note}
+  Prior plan findings:
+    - {pattern from planning-research agent — what worked in similar features}
+    - {lesson or reusable structure}
+
+What the user cares about most:
+  {From Phase 1 conversation — the core requirement, not everything}
+
+Constraints:
+  - {Technical constraint — language, framework, existing architecture}
+  - {Compatibility constraint — must work with existing X}
+  - {Time/scope constraint — if applicable}
+
+Unknowns (explicit gaps):
+  - {What we still don't know — things research didn't answer}
+  - {Assumptions we're making that could be wrong}
+```
+
+**Checkpoint**: Share the synthesis with the user. "Here's what I'm working with — anything missing or wrong?"
+
+### 3b. Analyze
+
+Structured analysis before making any decisions. Do NOT propose an approach yet — analyze first.
+
+```
+ANALYSIS
+========
+Dependency Graph:
+  {component A} → depends on → {component B} → depends on → {component C}
+  {component D} → independent (can be built in any order)
+  (Use simple text arrows, not diagrams. List every dependency.)
+
+Critical Path:
+  {The sequence of work that determines total effort. What must be done first
+   because everything else depends on it.}
+
+Risk Assessment:
+  HIGH: {risk description}
+    Likelihood: {why this is likely or has high impact}
+    Mitigation: {specific strategy to reduce risk}
+    Fallback: {what to do if mitigation fails}
+  MEDIUM: {risk description}
+    Likelihood: {assessment}
+    Mitigation: {strategy}
+  LOW: {risk description}
+    Acceptable because: {why we can live with this}
+
+Failure Modes:
+  If {X breaks/fails/is wrong}:
+    Blast radius: {what else breaks — contained to one file? Cascading?}
+    Detection: {how we'd know — test failure? Runtime error? Silent bug?}
+    Rollback: {how to undo — git revert? Feature flag? Manual fix?}
+  If {assumption Y is wrong}:
+    Impact: {how the plan changes}
+    Pivot: {alternative approach we'd take}
+
+Interface Boundaries:
+  Inputs: {what goes into this feature — data, config, user input, API calls}
+  Outputs: {what comes out — files written, state changes, side effects, API responses}
+  Touches: {existing systems/files this interacts with — be specific with file paths}
+  Does NOT touch: {explicitly list what's out of scope to prevent scope creep}
+```
+
+**Checkpoint**: If risks are HIGH, flag them: "I see a significant risk with {X}. Want to discuss mitigation before I proceed?"
+
+For non-trivial architecture decisions where multiple approaches are viable, suggest council:
+- "This has {N} valid approaches with real tradeoffs. Want to run `/council` to get multi-model input before I decide?"
+
+### 3c. Decide
+
+Now — and only now — propose the approach. The decision must reference the analysis above, not gut feeling.
+
+```
+APPROACH DECISION
+=================
+Chosen approach:
+  {Describe the approach in 2-3 sentences. Be specific — not "use a service" but
+   "create AuthService class in src/services/auth.ts with login(), logout(), refresh() methods,
+   following the pattern from src/services/user.ts"}
+
+Why this approach:
+  - {Reason 1 — tied to a specific finding from the analysis. "The dependency graph shows X
+    must be built first, so this approach starts with X."}
+  - {Reason 2 — tied to a risk mitigation. "This approach minimizes the HIGH risk identified
+    in 3b by isolating the change to a single file."}
+  - {Reason 3 — tied to a codebase pattern. "Research found the existing pattern in
+    src/services/user.ts:45-62 which this approach extends consistently."}
+
+Rejected alternatives:
+  Alternative A: {description}
+    Rejected because: {specific reason from analysis — not "it's worse" but "it increases
+    coupling between X and Y which the dependency graph shows is already a risk"}
+  Alternative B: {description}
+    Rejected because: {specific reason}
+  (If only one viable approach exists, state: "No viable alternatives identified —
+   the constraints from 3b make this the only workable approach because {reason}.")
+
+Key tradeoff accepted:
+  {What we're trading off. Every approach trades something. Be explicit.
+   Example: "Trading implementation speed for maintainability — the service pattern
+   is more code than a direct function call, but follows established conventions
+   and is easier to test."}
+```
+
+**Checkpoint**: Confirm the direction — "Lock in this approach? Or should we explore {specific alternative} more?"
+
+### 3d. Decompose
+
+Break the chosen approach into tasks. The decomposition must justify each split.
+
+```
+TASK DECOMPOSITION
+==================
+Total tasks: {N}
+Split rationale:
+  {Why N tasks, not N-1 or N+1. What principle drives the split —
+   "one task per target file" is the default heuristic. If deviating, explain why.}
+
+Task 1: {name}
+  Target file: {path}
+  Why separate: {what boundary this follows — "this is the foundation that other tasks depend on"}
+  Depends on: nothing (first task)
+  Scope: {1-2 sentences — what this task creates/modifies}
+
+Task 2: {name}
+  Target file: {path}
+  Why separate: {boundary reasoning — "different file, different concern"}
+  Depends on: Task 1 ({specifically what it needs — "the interface defined in Task 1"})
+  Scope: {1-2 sentences}
+
+Task 3: {name}
+  Target file: {path}
+  Why separate: {boundary reasoning}
+  Depends on: Task 1 and/or Task 2 ({specific dependency})
+  Scope: {1-2 sentences}
+
+... (continue for all tasks)
+
+Order rationale:
+  {Why this order, not another. Reference the dependency graph from 3b.
+   "Task 1 must be first because Tasks 2 and 3 both depend on its output.
+   Tasks 2 and 3 are independent of each other but ordered by complexity —
+   simpler first to establish patterns."}
+
+Confidence: {X}/10
+  Reasoning: {Why this score. What's well-understood vs uncertain.
+  Example: "8/10 — Tasks 1-3 follow established patterns and are straightforward.
+  Task 4 involves an integration point with the build system that has some uncertainty
+  around error handling. If Task 4 proves harder than expected, the blast radius
+  is contained to one file."}
+```
+
+**Checkpoint**: "Here's the task breakdown — {N} tasks in this order. The key dependency is {X}. Does this look right?"
+
+### Phase 3 Output Summary
+
+By the end of Phase 3, the following are locked in and available for Phase 4:
+- **Synthesis** — distilled understanding of what we're building and why
+- **Analysis** — dependency graph, risks with mitigations, failure modes, interface boundaries
+- **Approach** — chosen approach with reasoning, rejected alternatives, accepted tradeoff
+- **Decomposition** — task list with per-task justification, order rationale, confidence score
+
+Phase 4's preview draws directly from these: `Approach` → preview's "Approach" field, `Risks` from analysis → preview's "Risks" field, `Decomposition` → preview's "Estimated tasks" and "Mode" fields.
 
 ---
 
@@ -244,6 +420,120 @@ Announce the mode transparently:
 ---
 
 ### Task Brief Mode (Default)
+
+#### 5a. Sub-Agent Path (plan-writer)
+
+When the Task tool is available, offload the heavyweight writing to the `plan-writer` sub-agent. This keeps the main planning context focused on reasoning (Phases 1-4) and delegates the mechanical file writing to a specialized agent.
+
+**Prepare the context handoff:**
+
+Collect all Phase 3 output into a structured context block. This is the primary input for the plan-writer:
+
+```
+PLANNING CONTEXT FOR PLAN-WRITER
+=================================
+Feature: {feature name}
+Feature Directory: .agents/features/{feature}/
+
+--- PHASE 3 OUTPUT ---
+
+{Paste the full SYNTHESIS block from Phase 3a}
+
+{Paste the full ANALYSIS block from Phase 3b}
+
+{Paste the full APPROACH DECISION block from Phase 3c}
+
+{Paste the full TASK DECOMPOSITION block from Phase 3d}
+
+--- ADDITIONAL CONTEXT ---
+
+Codebase patterns found:
+{Key patterns from Phase 2 research — file paths and brief descriptions}
+
+Prior plan references:
+{Relevant patterns from completed plans, if any}
+
+Pillar context:
+{Pillar scope and PRD requirements, if applicable}
+```
+
+**Step 1: Invoke plan-writer for `plan.md`:**
+
+```
+Task tool call:
+  subagent_type: "plan-writer"
+  description: "Write plan.md for {feature}"
+  prompt: "Write plan.md for feature '{feature}'.
+
+  {PLANNING CONTEXT block from above}
+
+  Save to: .agents/features/{feature}/plan.md
+
+  Remember:
+  - Read all target files before writing (use Read tool for current content)
+  - plan.md must be 700-1000 lines
+  - Include TASK INDEX table at the bottom
+  - Self-validate before reporting complete"
+```
+
+After the agent returns, verify:
+1. File exists at `.agents/features/{feature}/plan.md`
+2. Read it and check line count (target: 700-1000)
+3. Check TASK INDEX table is present
+
+If the file is missing or under 700 lines, fall back to 5b (inline writing).
+
+**Step 2: Invoke plan-writer for each task brief (sequentially):**
+
+For each task N (from 1 to total tasks), invoke the plan-writer:
+
+```
+Task tool call:
+  subagent_type: "plan-writer"
+  description: "Write task-{N}.md for {feature}"
+  prompt: "Write task-{N}.md for feature '{feature}'.
+
+  {PLANNING CONTEXT block from above}
+
+  This is task {N} of {total}: {task name from TASK DECOMPOSITION}
+  Target file: {target file path from decomposition}
+  Scope: {scope description from decomposition}
+  Depends on: {dependency from decomposition}
+
+  Prior task handoff: {If N > 1, paste the Handoff Notes from the prior brief's
+  prompt or read task-{N-1}.md and extract its handoff section. If N == 1, say 'None — first task.'}
+
+  Save to: .agents/features/{feature}/task-{N}.md
+
+  Remember:
+  - Read .opencode/templates/TASK-BRIEF-TEMPLATE.md first
+  - Read the target file for current content (for inline pasting)
+  - Brief must be 700-1000 lines
+  - All sections from the template are required
+  - Self-validate before reporting complete"
+```
+
+After each agent returns, verify:
+1. File exists at `.agents/features/{feature}/task-{N}.md`
+2. Read it and check line count (target: 700-1000)
+
+If any brief fails (missing or under 700 lines), note the failure and continue with remaining briefs. At the end, fall back to 5b (inline writing) ONLY for the failed briefs.
+
+**Important**: Invoke briefs sequentially, not in parallel. Each brief's "Prior Task Context" section needs to accurately describe the previous task. Sequential invocation ensures the plan-writer can read the prior brief from disk.
+
+**Step 3: Verify all artifacts:**
+
+After all invocations complete:
+1. List all files in `.agents/features/{feature}/`
+2. Verify `plan.md` + all `task-N.md` files exist
+3. Spot-check: read the first task brief and verify it has all required sections
+4. If all artifacts are present and valid, skip 5b and proceed to Output section
+
+**Fallback trigger**: If the Task tool is unavailable, or if the plan-writer agent fails on more than half the artifacts, fall back to 5b entirely.
+
+#### 5b. Inline Fallback (write directly)
+
+If the Task tool is unavailable, or if the plan-writer sub-agent fails, write the artifacts directly in the main context. This is the original Phase 5 behavior.
 
 **Step 1: Write `plan.md` (overview + task index)**
 

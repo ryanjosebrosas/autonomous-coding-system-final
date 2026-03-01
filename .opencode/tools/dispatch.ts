@@ -7,9 +7,15 @@ import { tool } from "@opencode-ai/plugin"
 const OPENCODE_URL = "http://127.0.0.1:4096"
 const TEXT_TIMEOUT_MS = 120_000      // 2 min — text mode (reviews, analysis)
 const AGENT_TIMEOUT_MS = 300_000     // 5 min — agent mode (default)
-const AGENT_LONG_TIMEOUT_MS = 900_000 // 15 min — agent mode (planning, execution)
+const AGENT_LONG_TIMEOUT_MS = 900_000 // 15 min — agent mode (complex tasks)
+const AGENT_SESSION_NO_TIMEOUT = 0   // No timeout — planning/execution sessions run until done
 const CASCADE_TIMEOUT_MS = 30_000    // 30 sec — per cascade attempt (text mode)
 const COMMAND_TIMEOUT_MS = 600_000   // 10 min — command mode (full command execution)
+
+// Task types that are long-running sessions where timeout is not applicable.
+// These sessions involve extensive codebase exploration, multi-file writes,
+// and interactive tool use that can take 20-60+ minutes.
+const NO_TIMEOUT_TASK_TYPES = new Set(["planning", "execution"])
 const HEALTH_TIMEOUT_MS = 5_000
 const ARCHIVE_AFTER_DAYS = 3
 const ARCHIVE_AFTER_MS = ARCHIVE_AFTER_DAYS * 24 * 60 * 60 * 1000
@@ -264,7 +270,9 @@ async function dispatchAgent(
   timeoutMs: number,
 ): Promise<string | null> {
   try {
-    const response = await fetch(`${OPENCODE_URL}/session/${sessionId}/message`, {
+    // timeoutMs === 0 means no timeout — session runs until completion.
+    // Used for planning/execution sessions that can take 20-60+ minutes.
+    const fetchOptions: RequestInit = {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -277,8 +285,11 @@ async function dispatchAgent(
           model: { providerID: provider, modelID: model }, // subtask part model (for child agent)
         }],
       }),
-      signal: AbortSignal.timeout(timeoutMs),
-    })
+    }
+    if (timeoutMs > 0) {
+      fetchOptions.signal = AbortSignal.timeout(timeoutMs)
+    }
+    const response = await fetch(`${OPENCODE_URL}/session/${sessionId}/message`, fetchOptions)
     if (!response.ok) return null
     const data = await response.json()
     // Try extracting text directly from response parts
@@ -368,6 +379,7 @@ async function dispatchCascade(
   description: string,
   command?: string,
   commandArgs?: string,
+  taskType?: string,
 ): Promise<DispatchResult | null> {
   for (let i = 0; i < cascade.models.length; i++) {
     const route = cascade.models[i]
@@ -380,9 +392,13 @@ async function dispatchCascade(
         command, commandArgs || "", COMMAND_TIMEOUT_MS,
       )
     } else if (mode === "agent") {
+      // Use no-timeout for planning/execution sessions; fallback to AGENT_LONG_TIMEOUT_MS
+      const agentTimeout = taskType && NO_TIMEOUT_TASK_TYPES.has(taskType)
+        ? AGENT_SESSION_NO_TIMEOUT
+        : AGENT_LONG_TIMEOUT_MS
       text = await dispatchAgent(
         sessionId, route.provider, route.model,
-        prompt, description, AGENT_LONG_TIMEOUT_MS,
+        prompt, description, agentTimeout,
       )
     } else {
       text = await dispatchText(
@@ -581,11 +597,18 @@ export default tool({
     const mode: DispatchMode = (args.mode as DispatchMode) || "text"
     const taskDescription = args.description || args.taskType || "Dispatch task"
 
-    // Default timeouts by mode
-    const defaultTimeout = mode === "command" ? COMMAND_TIMEOUT_MS
+    // Default timeouts by mode, with no-timeout override for long-running sessions
+    let defaultTimeout = mode === "command" ? COMMAND_TIMEOUT_MS
       : mode === "agent" ? AGENT_TIMEOUT_MS
       : TEXT_TIMEOUT_MS
-    const timeoutMs = args.timeout || defaultTimeout
+
+    // Planning and execution sessions are long-running (20-60+ min).
+    // Override to no-timeout so AbortSignal doesn't kill them.
+    if (mode === "agent" && args.taskType && NO_TIMEOUT_TASK_TYPES.has(args.taskType)) {
+      defaultTimeout = AGENT_SESSION_NO_TIMEOUT
+    }
+
+    const timeoutMs = args.timeout ?? defaultTimeout
 
     // ── 1. Validate inputs ──
     if (!args.prompt) {
@@ -651,6 +674,7 @@ export default tool({
         taskDescription,
         args.command,
         args.prompt, // For command mode, prompt = command arguments
+        args.taskType,
       )
     } else {
       const route = resolved.route as ModelRoute

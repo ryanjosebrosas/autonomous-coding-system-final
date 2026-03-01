@@ -50,15 +50,76 @@ This command references model tiers. Map these to your configured models:
 
 The autonomous loop stops ONLY when:
 
-| Condition | Behavior |
-|-----------|----------|
-| **Gate PASSED** | Auto-continue to next pillar |
-| **Gate FAILED** | STOP — report which criteria failed |
-| **Unresolvable error** | STOP — after max retries exhausted, report what's blocking |
-| **User interrupts** (Ctrl+C) | STOP — save checkpoint, report progress |
-| **All specs complete** | STOP — project done, run `/ship` |
+| Condition | Behavior | Handoff Status |
+|-----------|----------|---------------|
+| **Gate PASSED** | Auto-continue to next pillar | `build-loop-continuing` |
+| **Gate FAILED** | STOP — report which criteria failed | `blocked` |
+| **Unresolvable error** | STOP — after max retries exhausted | `blocked` |
+| **User interrupts** (Ctrl+C) | STOP — save checkpoint | `blocked` |
+| **All specs complete** | STOP — project done, run `/ship` | `ready-to-ship` |
 
-Gates that PASS trigger automatic continuation to the next pillar. Gates that FAIL always stop for review.
+**Every stop condition writes a handoff file.** No exception. The handoff is how `/prime` knows what happened and what to do next.
+
+Gates that PASS write `build-loop-continuing` and auto-continue (no actual stop). Gates that FAIL always stop for review.
+
+---
+
+## Handoff Writes
+
+`/build` writes to `.agents/context/next-command.md` at these points:
+
+**On spec loop (Step 11 → Step 1):**
+```markdown
+# Pipeline Handoff
+<!-- Auto-updated by pipeline commands. Read by /prime. Do not edit manually. -->
+
+- **Last Command**: /build (spec {completed-spec} done)
+- **Feature**: {next-spec-name}
+- **Next Command**: /build next
+- **Timestamp**: {ISO 8601 timestamp}
+- **Status**: build-loop-continuing
+```
+
+**On gate FAIL (Step 10):**
+```markdown
+# Pipeline Handoff
+<!-- Auto-updated by pipeline commands. Read by /prime. Do not edit manually. -->
+
+- **Last Command**: /build (gate failed)
+- **Feature**: {spec-name}
+- **Next Command**: /build {spec-name}
+- **Timestamp**: {ISO 8601 timestamp}
+- **Status**: blocked
+```
+
+**On unresolvable error (any step):**
+```markdown
+# Pipeline Handoff
+<!-- Auto-updated by pipeline commands. Read by /prime. Do not edit manually. -->
+
+- **Last Command**: /build ({step} failed for {spec-name})
+- **Feature**: {spec-name}
+- **Next Command**: /build {spec-name}
+- **Timestamp**: {ISO 8601 timestamp}
+- **Status**: blocked
+```
+
+**On all specs complete:**
+```markdown
+# Pipeline Handoff
+<!-- Auto-updated by pipeline commands. Read by /prime. Do not edit manually. -->
+
+- **Last Command**: /build (all specs complete)
+- **Feature**: {project-name}
+- **Next Command**: /ship
+- **Timestamp**: {ISO 8601 timestamp}
+- **Status**: ready-to-ship
+```
+
+**On user interrupt (Ctrl+C):**
+Write the same `blocked` handoff as unresolvable error, with the current spec and step. The per-step checkpoint in `build-state.json` captures exactly where to resume.
+
+Note: Step 8 (`/commit`) writes its own `build-loop-continuing` handoff. `/build` does NOT overwrite it — `/commit`'s handoff is the correct state after a successful commit.
 
 ---
 
@@ -157,7 +218,6 @@ Print progress dashboard:
      mode: "agent",
      prompt: "Run /prime first. Then run /planning {spec-id} {spec-name} --auto-approve ...",
      taskType: "planning",
-     timeout: 900,
    })
    ```
    The `--auto-approve` flag skips the interactive approval gate in `/planning` Phase 4 — the spec was already approved via BUILD_ORDER.
@@ -165,6 +225,10 @@ Print progress dashboard:
 
    **If dispatch unavailable:**
    Write the plan directly using the `/planning` methodology. The primary model gathers context, runs discovery, and produces the structured plan inline.
+
+   **If dispatch fails:**
+   - Fall back to the "If dispatch unavailable" path (write the plan inline).
+   - Log: "Dispatch failed for planning {spec-name} — falling back to inline planning."
 
    - `plan.md` MUST be 700-1000 lines — this is a hard requirement
    - Each `task-{N}.md` brief MUST be self-contained and executable without reading `plan.md`
@@ -258,7 +322,12 @@ git add .agents/features/{spec-name}/plan-master.md .agents/features/{spec-name}
 git commit -m "plan({spec-name}): master plan + {N} sub-plans"
 ```
 
-This is the rollback point. If implementation fails, `git stash` to here and retry.
+**If `git commit` fails** (pre-commit hooks, empty diff, plan files missing):
+- STOP the pipeline. Do NOT proceed to Step 5.
+- Report: "Plan commit failed for spec {spec-name}: {error}. Fix the issue and run `/build {spec-name}` to retry."
+- Without this commit, there is no rollback point — execution must not begin.
+
+This is the rollback point. If implementation fails, `git reset --hard HEAD` to here and retry.
 
 ---
 
@@ -284,6 +353,11 @@ This is the rollback point. If implementation fails, `git stash` to here and ret
 
    **If dispatch unavailable:**
    Run `/execute .agents/features/{spec-name}/plan.md` inline. `/execute` auto-detects the next undone brief by scanning for `task-{N}.done.md` files.
+
+   **If dispatch fails or times out:**
+   - Fall back to the "If dispatch unavailable" path (run `/execute` inline).
+   - Log: "Dispatch timed out for execution — falling back to inline execution."
+   - If inline execution also fails: STOP, report the error.
 
 2. **Check completion:**
    - If `.agents/features/{spec-name}/plan.done.md` exists → ALL briefs complete. Exit loop → Step 6.
@@ -314,6 +388,11 @@ This is the rollback point. If implementation fails, `git stash` to here and ret
 
    **If dispatch unavailable:**
    Run `/execute .agents/features/{spec-name}/plan-master.md` inline. `/execute` auto-detects the next undone phase by scanning for `plan-phase-{N}.done.md` files.
+
+   **If dispatch fails or times out:**
+   - Fall back to the "If dispatch unavailable" path (run `/execute` inline).
+   - Log: "Dispatch timed out for execution — falling back to inline execution."
+   - If inline execution also fails: STOP, report the error.
 
 2. **Check completion:**
    - If `.agents/features/{spec-name}/plan-master.done.md` exists → ALL phases complete. Exit loop → Step 6.
@@ -432,6 +511,10 @@ Run thorough self-review using `/code-review` methodology:
 - Check for Major issues (performance, architecture, error handling)
 - Check for Minor issues (code quality, naming, documentation)
 
+**If any dispatch/batch-dispatch fails or times out:**
+- Fall back to the "If dispatch unavailable" path (self-review).
+- Log: "Dispatch timed out for code review — falling back to self-review."
+
 #### 7b: Process Review Results
 
 Collect all findings. Deduplicate. Classify each finding:
@@ -462,6 +545,20 @@ Collect all findings. Deduplicate. Classify each finding:
 - Any Critical/Major → 7c
 
 **For heavy depth**: skip escalationAction — T4 and T5 always run regardless of consensus.
+
+**If dispatch unavailable** (self-review in 7a):
+
+Apply the same severity-based decision logic as the single-reviewer case:
+
+| Self-Review Finding | Action |
+|--------------------|--------|
+| 0 issues | Exit loop → Step 7d |
+| Only Minor / false-positives | Exit loop → Step 7d |
+| Any Critical fixable | Continue to 7c (fix loop) |
+| Any Major fixable | Continue to 7c (fix loop) |
+| Only external dependency / unresolvable | Mark as known-skip → Step 7d |
+
+No consensus gating applies — there is only one reviewer (self). The classification table above replaces `escalationAction` for the non-dispatch path.
 
 #### 7c: Fix Loop (unlimited — until fixed or stuck)
 
@@ -524,7 +621,11 @@ dispatch({
   prompt: "ESCALATION: Final review panel is stuck on the following findings across 2 consecutive runs. Make the final call — APPROVE or REJECT with specific reasoning.\n\nSpec: {spec-name}\nStuck findings:\n{list of persistent REJECT findings}\n\n{git diff HEAD}\n\nIf APPROVE: explain why the findings are acceptable or misclassified.\nIf REJECT: specify exactly what must change before commit.",
 })
 ```
-Apply the result. If APPROVE: proceed to Step 8. If REJECT: apply the specific fix, then Step 8 (no more review cycles).
+Apply the result:
+- **If APPROVE**: proceed to Step 8.
+- **If REJECT**: apply the specific fix, then re-run validation (Step 6 — lint, types, tests). If validation passes, proceed to Step 8. If validation fails, STOP and surface to user — this is the last escalation level, no more automated cycles.
+
+This is the terminal fix — no further review cycles after 7e. But validation MUST pass before commit.
 
 **If dispatch unavailable:** STOP and surface to user — cannot auto-resolve without T5.
 
@@ -532,68 +633,113 @@ Apply the result. If APPROVE: proceed to Step 8. If REJECT: apply the specific f
 
 ### Step 8: Commit + Push
 
-On successful validation + clean review:
+On successful validation + clean review, delegate to `/commit` — do NOT duplicate its logic.
 
-**8a. Generate commit message:**
+**8a. Run `/commit`:**
+
+`/commit` handles: commit message generation (via dispatch or inline), artifact completion sweep (`report.md` → `report.done.md`, `review.md` → `review.done.md`), staging, commit, handoff write, and memory update.
+
+Tell `/commit` this is a `/build` loop context so it writes `build-loop-continuing` status instead of `ready-for-pr`. The feature name is `{spec-name}`.
 
 **If dispatch available:**
 ```
 dispatch({
+  mode: "agent",
+  prompt: "Run /commit for spec {spec-name}. This is a /build loop — set handoff status to build-loop-continuing with Next Command /build next. Stage all files in the spec's touches list plus .agents/features/{spec-name}/ and .agents/specs/.",
   taskType: "commit-message",
-  prompt: "Generate a conventional commit message for the following changes.\n\nSpec: {spec-name}\nType hint: {feat|fix|chore|refactor based on spec type}\n\n{git diff HEAD --stat}\n\nFormat:\n{type}({spec-name}): short description (imperative, max 50 chars)\n\n- bullet 1: what was implemented\n- bullet 2: what was implemented\n- bullet 3: why (if non-obvious)\n\nMax 3 bullets. No Co-Authored-By lines.",
+  timeout: 300,
 })
 ```
 
 **If dispatch unavailable:**
-Generate commit message directly:
-```
-Format: feat({spec-name}): short description (imperative, max 50 chars)
-Body (3 bullets max): what was implemented and why.
-```
+Run `/commit` inline. Before running, inform it: "This is a `/build` loop — use `build-loop-continuing` status in the handoff."
 
-**8b. Commit and push:**
+**If `/commit` fails** (pre-commit hooks, empty diff, merge conflict):
+- `/commit` writes a `blocked` handoff automatically.
+- STOP the pipeline. Report: "Commit failed for spec {spec-name}. See handoff for details."
+- Do NOT proceed to Step 9 or update any state.
+
+**8b. Push to remote:**
+
+After `/commit` succeeds:
 ```bash
-git add -- {relevant files from spec touches}
-git commit -m "{generated message}"
 git push
 ```
 
-**Never include `Co-Authored-By` lines.** Commits are authored solely by the user.
+**If `git push` fails:**
+1. Retry once: `git push`
+2. If retry fails: STOP the pipeline. Write handoff:
+   ```markdown
+   # Pipeline Handoff
+   <!-- Auto-updated by pipeline commands. Read by /prime. Do not edit manually. -->
 
-Push immediately after every spec — keeps remote in sync, enables rollback from any point.
+   - **Last Command**: /build (push failed after commit)
+   - **Feature**: {spec-name}
+   - **Next Command**: git push && /build next
+   - **Timestamp**: {ISO 8601 timestamp}
+   - **Status**: blocked
+   ```
+   Report: "Spec {spec-name} committed locally but push failed. Run `git push` manually, then `/build next` to continue."
+3. Do NOT proceed to Step 9 or update any state until push succeeds.
+
+**Never include `Co-Authored-By` lines.** Commits are authored solely by the user.
 
 ---
 
-### Step 9: Update State
+### Step 9: Verify + Update State
 
-1. **Mark spec complete** in `.agents/specs/BUILD_ORDER.md`:
-   - Change `- [ ]` to `- [x]` for the completed spec
+**9.1. Run rolling integration check (BEFORE updating state):**
 
-2. **Update `.agents/specs/build-state.json`:**
-   ```json
-   {
-     "lastSpec": "P1-02",
-     "completed": ["P1-01", "P1-02"],
-     "currentPillar": 1,
-     "totalSpecs": 20,
-     "patternsEstablished": ["strict typing", "config pattern"],
-     "decisionsLog": [
-       {"spec": "P1-01", "decision": "Used X pattern", "reason": "Maintains compatibility"}
-     ]
-   }
-   ```
+```bash
+{configured lint command}
+{configured type check command}
+{configured test command}
+```
 
-3. **Update Archon** (if connected):
-   - Call `manage_task("update", task_id="...", status="done")` for all spec tasks
-   - Update project progress
+If integration check fails:
+- STOP the pipeline. Do NOT update BUILD_ORDER or build-state.json.
+- Report: "Regression detected after committing spec {spec-name}. Integration check failed: {errors}."
+- The spec is committed (Step 8) but not marked complete. Fix the regression and run `/build {spec-name}` to re-validate and mark complete.
 
-4. **Run rolling integration check:**
-   ```bash
-   {configured lint command}
-   {configured type check command}
-   {configured test command}
-   ```
-   If integration check fails: STOP, report regression. Do not proceed to next spec.
+**9.2. Mark spec complete** in `.agents/specs/BUILD_ORDER.md` (only after 9.1 passes):
+- Change `- [ ]` to `- [x]` for the completed spec
+
+**9.3. Update `.agents/specs/build-state.json`:**
+```json
+{
+  "lastSpec": "P1-02",
+  "completed": ["P1-01", "P1-02"],
+  "currentPillar": 1,
+  "totalSpecs": 20,
+  "currentSpec": null,
+  "currentStep": null,
+  "patternsEstablished": ["strict typing", "config pattern"],
+  "decisionsLog": [
+    {"spec": "P1-01", "decision": "Used X pattern", "reason": "Maintains compatibility"}
+  ]
+}
+```
+
+**`currentSpec` and `currentStep`**: Set at the START of each step, cleared (set to `null`) after spec completion. Used for context compaction recovery.
+
+| Step | `currentStep` value |
+|------|-------------------|
+| Step 1 | `"pick"` |
+| Step 2 | `"plan"` |
+| Step 3 | `"plan-review"` |
+| Step 4 | `"plan-commit"` |
+| Step 5 | `"execute"` |
+| Step 6 | `"validate"` |
+| Step 7 | `"review"` |
+| Step 8 | `"commit"` |
+| Step 9 | `"update-state"` |
+| Step 10 | `"gate-check"` |
+
+At the start of each step, update `build-state.json` with the current spec and step value. After Step 9 completes (spec fully done), clear both fields back to `null`.
+
+**9.4. Update Archon** (if connected):
+- Call `manage_task("update", task_id="...", status="done")` for all spec tasks
+- Update project progress
 
 ---
 
@@ -645,34 +791,117 @@ Push immediately after every spec — keeps remote in sync, enables rollback fro
 
 If implementing spec N reveals that completed spec M needs changes:
 
-1. Emit a note: "Spec {N} needs changes to completed spec {M}"
-2. Plan + execute the patch to spec M
-3. Re-validate spec M (run its acceptance criteria again)
-4. Continue with spec N
-5. Log the backward repair in `build-state.json`
+### 1. Assess Scope
 
-This is autonomous — do NOT ask the user unless the repair is architectural (changes to 3+ completed specs).
+- **Minor** (1-2 files, no API changes): Autonomous repair.
+- **Moderate** (3+ files, no architecture change): Autonomous repair with extra caution.
+- **Architectural** (changes to 3+ completed specs, or API surface changes): STOP and surface to user. Write handoff with `blocked` status.
+
+### 2. Plan the Patch
+
+Create an inline patch plan (NOT a full 700-line plan — this is a targeted fix):
+
+```markdown
+# Backward Repair: {spec-M-name}
+# Triggered by: {spec-N-name}
+# Reason: {why spec M needs changes}
+
+## Changes
+- File: {path} — {what changes and why}
+- File: {path} — {what changes and why}
+
+## Validation
+- {spec M's acceptance criteria from its original plan}
+- {spec N's acceptance criteria that triggered the repair}
+```
+
+Do NOT save this as a separate plan file — it's inline within the current `/build` session.
+
+### 3. Execute the Patch
+
+- Apply the changes to spec M's files.
+- Do NOT create a separate `/execute` session — the patch is small enough to apply inline.
+
+### 4. Re-validate Spec M
+
+Run spec M's acceptance criteria (from its original plan, now at `.agents/features/{spec-M}/plan.done.md`):
+```bash
+{configured lint command}
+{configured type check command}
+{configured test command}
+```
+
+If validation fails: STOP. The backward repair introduced a regression. Surface to user with both spec names and the failure details.
+
+### 5. Commit the Repair
+
+```bash
+git add -- {patched files}
+git commit -m "fix({spec-M-name}): backward repair triggered by {spec-N-name}
+
+- {what changed and why}"
+git push
+```
+
+### 6. Log and Continue
+
+Add to `build-state.json` `decisionsLog`:
+```json
+{"spec": "{spec-N-name}", "decision": "Backward repair to {spec-M-name}", "reason": "{why}"}
+```
+
+Resume spec N implementation from where it was before the repair detour.
+
+### Guardrails
+
+- Maximum 1 backward repair per spec execution. If a second repair is needed, STOP — something is wrong with the dependency graph.
+- The repair commit is separate from spec N's commit — it has its own conventional commit message scoped to spec M.
+- Spec M's `[x]` in BUILD_ORDER stays checked — it was already complete, the repair is a hotfix.
 
 ---
 
 ## Context Management
 
-For large projects with many specs, context window management is critical:
+For large projects with many specs, context window management is critical.
 
-1. **Between specs:** Clear working context but preserve:
-   - `build-state.json` (always read at Step 1)
-   - `memory.md` (always read at Step 1)
-   - Current pillar's completed spec list (for pattern reference)
+### Between Specs
 
-2. **Within a spec:** Full context for that spec's plan + implementation
+Clear working context but preserve:
+- `build-state.json` (always read at Step 1)
+- `memory.md` (always read at Step 1)
+- Current pillar's completed spec list (for pattern reference)
 
-3. **Checkpoint system:** At the end of each spec, the state is fully captured in:
-   - `.agents/specs/build-state.json` — what's done, patterns established
-   - `.agents/specs/BUILD_ORDER.md` — checkboxes
-   - `.agents/specs/PILLARS.md` — pillar status
-   - Git history — every spec is a commit
+### Within a Spec
 
-If context compacts mid-spec: read `build-state.json` + current plan file to resume.
+Full context for that spec's plan + implementation.
+
+### Checkpoint System
+
+State is captured at two granularities:
+
+**Per-spec checkpoint** (after Step 9):
+- `.agents/specs/build-state.json` — what's done, patterns established
+- `.agents/specs/BUILD_ORDER.md` — checkboxes
+- `.agents/specs/PILLARS.md` — pillar status
+- Git history — every spec is a commit
+
+**Per-step checkpoint** (every step transition):
+- `build-state.json` fields `currentSpec` and `currentStep` — what spec and step are in progress
+
+### Context Compaction Recovery
+
+If context compacts mid-spec, follow this procedure:
+
+1. Read `.agents/specs/build-state.json`. Check `currentSpec` and `currentStep`.
+2. Read `.agents/context/next-command.md` for the latest handoff.
+3. If `currentStep` is set:
+   - **Steps 1-4** (pick through plan-commit): Check `git log` for a plan commit. If committed, resume at Step 5. If not, restart at Step 2 (re-plan).
+   - **Step 5** (execute): Check `.agents/features/{spec}/` for `.done.md` task briefs. Resume execution for remaining briefs.
+   - **Steps 6-7** (validate/review): Re-run validation from Step 6. Prior review results are lost on compaction — re-review is safe and idempotent.
+   - **Steps 8-9** (commit/state): Check `git log` for a code commit. If committed, resume at Step 9. If not, resume at Step 8.
+   - **Step 10** (gate): Re-run the gate check — it's idempotent.
+4. If `currentStep` is null but `currentSpec` is set: spec was being picked. Start at Step 1.
+5. If both are null: no spec in progress. Start at Step 1 (pick next).
 
 ---
 
