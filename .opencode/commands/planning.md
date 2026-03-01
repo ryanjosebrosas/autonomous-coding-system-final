@@ -8,6 +8,11 @@ Work WITH the user to explore, question, and discover the right approach for a s
 
 ## Feature: $ARGUMENTS
 
+**Flags** (parsed from `$ARGUMENTS`):
+- `--auto-approve` (optional): Skip Phase 4 interactive approval gate. The plan preview is still generated and logged, but approval is automatic via self-review checklist instead of user prompt. Used by `/build` when dispatching to `/planning` for autonomous operation.
+
+When flags are present in `$ARGUMENTS`, strip them before parsing the remaining value as the feature name or spec ID.
+
 ---
 
 ## Pipeline Position
@@ -193,7 +198,29 @@ Risks:     {top 1-2 risks}
 Tests:     {testing approach}
 Estimated tasks: {N tasks}
 Mode:      {Task Briefs (N briefs, default) | Master + Sub-Plans (N phases, escape hatch)}
+```
 
+### If `--auto-approve` is set:
+
+Run the self-review checklist instead of prompting the user:
+
+1. All acceptance criteria from the spec (BUILD_ORDER or feature description) are addressed in the preview
+2. File paths listed are correct and exist (or will be created)
+3. The approach is consistent with established project patterns
+4. Testing approach covers the acceptance criteria
+5. No obvious gaps in the task breakdown
+
+**If all checklist items pass:** Log the preview (print it to output for the record), then proceed directly to Phase 5.
+
+**If any checklist item fails:** Log the preview with the failing items noted, then STOP and surface the issue — even in autonomous mode, a fundamentally flawed plan should not proceed.
+
+```
+AUTO-APPROVED: Plan preview passed self-review checklist. Proceeding to Phase 5.
+```
+
+### If `--auto-approve` is NOT set (default):
+
+```
 Approve this direction to write the full plan? [y/n/adjust]
 ```
 

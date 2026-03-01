@@ -143,11 +143,11 @@ Print progress dashboard:
    - Default: most specs should NOT need user interaction — the BUILD_ORDER was already approved.
 
 3. **Detect plan mode:**
-   - **Single Plan Mode** (DEFAULT — 90%+ of specs): Use when spec has <10 estimated tasks OR touches <5 files OR is marked "light"/"standard"
-   - **Master + Sub-Plan Mode** (EXCEPTION — rare, heavy specs): Use when spec has >=10 estimated tasks OR touches >=5 files OR is marked "heavy"
-   - When in doubt: default to Single Plan Mode
+   - **Task Brief Mode** (DEFAULT — use for all standard specs): Produces `plan.md` (overview + task index) + one `task-N.md` brief per task. Each brief runs in one `/execute` session. Use this for the vast majority of specs — there is no task count upper boundary.
+   - **Master + Sub-Plan Mode** (EXCEPTION — rare, genuinely complex specs): Use only when the spec has multiple distinct phases with heavy cross-phase dependencies that make a single plan unwieldy. The trigger is architectural complexity, not task count. This is rare.
+   - When in doubt: default to Task Brief Mode
 
-#### Single Plan Mode (Default)
+#### Task Brief Mode (Default)
 
 4. **Write or dispatch plan:**
 
@@ -155,24 +155,26 @@ Print progress dashboard:
    ```
    dispatch({
      mode: "agent",
-     prompt: "Run /prime first. Then run /planning {spec-id} {spec-name}...",
+     prompt: "Run /prime first. Then run /planning {spec-id} {spec-name} --auto-approve ...",
      taskType: "planning",
      timeout: 900,
    })
    ```
-   Use a T1 thinking model for best results (reasoning produces better 700-1000 line plans).
+   The `--auto-approve` flag skips the interactive approval gate in `/planning` Phase 4 — the spec was already approved via BUILD_ORDER.
+   Use a T1 thinking model for best results (reasoning produces better plans and task briefs).
 
    **If dispatch unavailable:**
    Write the plan directly using the `/planning` methodology. The primary model gathers context, runs discovery, and produces the structured plan inline.
 
-   - Plan MUST be 700-1000 lines — this is a hard requirement
-   - Plan MUST include actual code samples (copy-pasteable), not summaries
-   - Plan MUST include exact file paths, line references, import statements
-   - Plan MUST include validation commands for every task
-   - Save to: `.agents/plans/{spec-name}.md`
+   - `plan.md` MUST be 700-1000 lines — this is a hard requirement
+   - Each `task-{N}.md` brief MUST be self-contained and executable without reading `plan.md`
+   - Plans MUST include actual code samples (copy-pasteable), not summaries
+   - Plans MUST include exact file paths, line references, import statements
+   - Plans MUST include validation commands for every task
+   - Save to: `.agents/features/{spec-name}/plan.md` + `.agents/features/{spec-name}/task-{N}.md`
 
 5. **Validate plan size:**
-   - Count lines. If under 700: reject, re-write with explicit "plan is too short, expand code samples and task detail"
+   - Count lines of `plan.md`. If under 700: reject, re-write with explicit "plan is too short, expand code samples and task detail"
    - If over 1000: acceptable but flag if significantly over
 
 #### Master + Sub-Plan Mode (Exception)
@@ -181,7 +183,7 @@ Print progress dashboard:
    Same as above but in master mode. The master plan defines phases, task groupings, phase gates.
    - Master plan MUST be ~400-600 lines
    - Each sub-plan MUST be 700-1000 lines
-   - Save to: `.agents/plans/{spec-name}-master.md` + `.agents/plans/{spec-name}-phase-*.md`
+   - Save to: `.agents/features/{spec-name}/plan-master.md` + `.agents/features/{spec-name}/plan-phase-{N}.md`
 
 ---
 
@@ -244,15 +246,15 @@ If rejected twice: STOP and surface the issue to the user.
 
 Git save point:
 
-#### Single Plan Mode
+#### Task Brief Mode (Default)
 ```bash
-git add .agents/plans/{spec-name}.md
-git commit -m "plan({spec-name}): structured implementation plan"
+git add .agents/features/{spec-name}/plan.md .agents/features/{spec-name}/task-*.md
+git commit -m "plan({spec-name}): structured implementation plan + {N} task briefs"
 ```
 
 #### Master + Sub-Plan Mode
 ```bash
-git add .agents/plans/{spec-name}-master.md .agents/plans/{spec-name}-phase-*.md
+git add .agents/features/{spec-name}/plan-master.md .agents/features/{spec-name}/plan-phase-*.md
 git commit -m "plan({spec-name}): master plan + {N} sub-plans"
 ```
 
@@ -260,26 +262,66 @@ This is the rollback point. If implementation fails, `git stash` to here and ret
 
 ---
 
-### Step 5: Execute (T1)
+### Step 5: Execute All Briefs (T1)
 
-#### Single Plan Mode (Default)
+`/execute` processes ONE task brief (or ONE phase) per dispatch. `/build` owns the loop that re-dispatches until all briefs/phases are complete.
 
-**If dispatch available:**
-```
-dispatch({
-  mode: "agent",
-  prompt: "Run /prime first. Then run /execute .agents/plans/{spec-name}.md",
-  taskType: "execution",
-  timeout: 900,
-})
-```
+#### Task Brief Mode (Default)
 
-**If dispatch unavailable:**
-Execute the plan inline using `/execute` methodology. Read the plan, implement each task in order, validate after each change.
+**Brief-completion loop:**
+
+1. **Dispatch or execute one brief:**
+
+   **If dispatch available:**
+   ```
+   dispatch({
+     mode: "agent",
+     prompt: "Run /prime first. Then run /execute .agents/features/{spec-name}/plan.md",
+     taskType: "execution",
+     timeout: 900,
+   })
+   ```
+
+   **If dispatch unavailable:**
+   Run `/execute .agents/features/{spec-name}/plan.md` inline. `/execute` auto-detects the next undone brief by scanning for `task-{N}.done.md` files.
+
+2. **Check completion:**
+   - If `.agents/features/{spec-name}/plan.done.md` exists → ALL briefs complete. Exit loop → Step 6.
+   - If `plan.done.md` does NOT exist → briefs remain. Go back to step 1.
+
+3. **Stuck detection:**
+   - Track which brief was completed each iteration (check `task-{N}.done.md` count before and after dispatch).
+   - If no new `.done.md` file appears after a dispatch (brief count unchanged) → the dispatch failed or stalled.
+   - Retry once. If still no progress: STOP and report "Execution stalled on task brief {N} for spec {spec-name}."
+
+**Loop invariant:** Each dispatch completes exactly one brief. The loop runs N times for N briefs. `/execute` picks the next undone brief automatically — `/build` does not need to track which brief is next.
 
 #### Master + Sub-Plan Mode
 
-Execute with master plan — `/execute` handles sub-plan looping automatically.
+**Phase-completion loop:**
+
+1. **Dispatch or execute one phase:**
+
+   **If dispatch available:**
+   ```
+   dispatch({
+     mode: "agent",
+     prompt: "Run /prime first. Then run /execute .agents/features/{spec-name}/plan-master.md",
+     taskType: "execution",
+     timeout: 900,
+   })
+   ```
+
+   **If dispatch unavailable:**
+   Run `/execute .agents/features/{spec-name}/plan-master.md` inline. `/execute` auto-detects the next undone phase by scanning for `plan-phase-{N}.done.md` files.
+
+2. **Check completion:**
+   - If `.agents/features/{spec-name}/plan-master.done.md` exists → ALL phases complete. Exit loop → Step 6.
+   - If `plan-master.done.md` does NOT exist → phases remain. Go back to step 1.
+
+3. **Stuck detection:**
+   - Same as task brief mode: track `plan-phase-{N}.done.md` count before and after dispatch.
+   - If no new `.done.md` file appears after a dispatch → retry once, then STOP.
 
 ---
 
@@ -433,17 +475,29 @@ Collect all findings. Deduplicate. Classify each finding:
 
 #### 7d: Final Review Panel (always runs)
 
-Before committing, run final review:
+Before committing, run the final review panel:
 
 **If dispatch available:**
-Run 2-3 T3/T4 reviewers in parallel with verdict: APPROVE or REJECT.
 
-**If dispatch unavailable:**
-Self-review with structured rubric:
-- Does the implementation match the plan?
-- Are all acceptance criteria met?
-- Are there any security concerns?
-- Is the code consistent with project patterns?
+```
+FINAL_REVIEW_PROMPT = "Final pre-commit review panel. Review the following implementation for the spec '{spec-name}'.\n\n{git diff HEAD}\n\nAcceptance criteria from the plan:\n{acceptance criteria section from plan.md}\n\nRespond with:\n- APPROVE — implementation is clean and meets criteria\n- REJECT: [list specific findings as: Severity | File:Line | Issue]\nDo NOT report issues that are pre-existing or out-of-scope for this spec."
+
+batch-dispatch({
+  batchPattern: "t4-sign-off",
+  prompt: FINAL_REVIEW_PROMPT,
+})
+```
+
+The `t4-sign-off` pattern runs: codex + claude-sonnet-4-5 + claude-sonnet-4-6 in parallel.
+
+**Read result from output:**
+
+| Result | Meaning | Action |
+|--------|---------|--------|
+| All APPROVE | Unanimous pass | Commit + push (Step 8) |
+| Mixed (some APPROVE, some REJECT) | Split verdict | Fix REJECT findings → re-run panel once |
+| All REJECT | Full failure | Fix findings → re-run panel once |
+| **Stuck** (same REJECT findings across 2 panel runs) | Unresolvable | Escalate to 7e (T5) |
 
 **Quantified Review Criteria (required):**
 - Test coverage delta ≥0% (no regression)
@@ -451,18 +505,28 @@ Self-review with structured rubric:
 - All type checks pass
 - No Critical/Major findings from ≥2 reviewers (or Alignment Score ≥7/10 from `/system-review`)
 
-| Result | Action |
-|--------|--------|
-| **APPROVE** | Commit + push (Step 8) |
-| **REJECT with fixable issues** | Fix → re-validate → re-review |
-| **Stuck** (same REJECT findings across 2 runs) | Escalate to T5 if available, else STOP |
+**If dispatch unavailable:**
+Self-review with structured rubric:
+- Does the implementation match the plan?
+- Are all acceptance criteria met?
+- Are there any security concerns?
+- Is the code consistent with project patterns?
+Apply the quantified criteria above as a checklist. If all pass: proceed to Step 8.
 
 #### 7e: T5 Escalation (last resort — stuck only)
 
 Only reached when final review panel is stuck on the same findings across 2 consecutive runs:
 
-If dispatch available, send to T5 (best available model) for final call.
-If not available, STOP and surface to user.
+**If dispatch available:**
+```
+dispatch({
+  taskType: "final-review",
+  prompt: "ESCALATION: Final review panel is stuck on the following findings across 2 consecutive runs. Make the final call — APPROVE or REJECT with specific reasoning.\n\nSpec: {spec-name}\nStuck findings:\n{list of persistent REJECT findings}\n\n{git diff HEAD}\n\nIf APPROVE: explain why the findings are acceptable or misclassified.\nIf REJECT: specify exactly what must change before commit.",
+})
+```
+Apply the result. If APPROVE: proceed to Step 8. If REJECT: apply the specific fix, then Step 8 (no more review cycles).
+
+**If dispatch unavailable:** STOP and surface to user — cannot auto-resolve without T5.
 
 ---
 
@@ -473,7 +537,12 @@ On successful validation + clean review:
 **8a. Generate commit message:**
 
 **If dispatch available:**
-Dispatch to T1 for conventional commit message generation.
+```
+dispatch({
+  taskType: "commit-message",
+  prompt: "Generate a conventional commit message for the following changes.\n\nSpec: {spec-name}\nType hint: {feat|fix|chore|refactor based on spec type}\n\n{git diff HEAD --stat}\n\nFormat:\n{type}({spec-name}): short description (imperative, max 50 chars)\n\n- bullet 1: what was implemented\n- bullet 2: what was implemented\n- bullet 3: why (if non-obvious)\n\nMax 3 bullets. No Co-Authored-By lines.",
+})
+```
 
 **If dispatch unavailable:**
 Generate commit message directly:

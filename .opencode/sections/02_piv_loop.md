@@ -16,15 +16,15 @@ Complex features (15+ tasks, 4+ phases): `/planning` auto-decomposes into sub-pl
 1. **Vibe Planning** — casual conversation to explore ideas, ask questions, research codebase. See: `templates/VIBE-PLANNING-GUIDE.md`
 2. **Structured Plan** — turn conversation into a markdown document
    - Use template: `templates/STRUCTURED-PLAN-TEMPLATE.md`
-   - Save to: `.agents/plans/{feature}-plan.md`
+   - Save to: `.agents/features/{feature}/plan.md`
    - Apply the 4 pillars of Context Engineering (see `sections/03_context_engineering.md` for pillar → plan mapping)
 
 **Do NOT** take your PRD and use it as a structured plan. Break it into granular Layer 2 plans — one per PIV loop.
 
 ### Implementation
-- Fresh conversation → `/execute .agents/plans/{feature}-plan.md`
+- Fresh conversation → `/execute .agents/features/{feature}/plan.md`
 - Trust but verify
-- Never execute implementation work without a `/planning` artifact in `.agents/plans/`
+- Never execute implementation work without a `/planning` artifact in `.agents/features/`
 
 ### Validation
 - AI: tests + linting. Human: code review + manual testing.

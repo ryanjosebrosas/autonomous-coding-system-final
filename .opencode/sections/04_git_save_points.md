@@ -1,6 +1,6 @@
 **Before implementation**, commit the plan:
 ```
-git add .agents/plans/{feature}-plan.md && git commit -m "plan: {feature} structured plan"
+git add .agents/features/{feature}/plan.md && git commit -m "plan: {feature} structured plan"
 ```
 
 **If implementation fails**: `git stash` → tweak plan → retry.
