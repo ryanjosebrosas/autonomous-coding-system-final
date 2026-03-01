@@ -191,14 +191,26 @@ Print progress dashboard:
 
 Review the completed plan for quality:
 
-**If dispatch available:**
+**If dispatch available**, review by depth:
+
+> Note: Truncate plan to 400 lines for the review prompt if > 400 lines — reviewers see enough to assess structure and approach.
+
+**light:**
 ```
 dispatch({
   taskType: "plan-review",
-  model: {T3 or T4 model},
-  prompt: "Review this implementation plan for completeness, correctness, and risks:\n\n{full plan content}\n\nRespond with one of:\n- APPROVE: Plan is ready for implementation.\n- IMPROVE: {list specific improvements} — then provide the improved sections.\n- REJECT: {list critical issues that must be fixed before implementation}."
+  prompt: "Review this implementation plan for completeness, correctness, and risks:\n\n{full plan content}\n\nRespond with APPROVE, IMPROVE: {list}, or REJECT: {list}."
 })
 ```
+
+**standard / heavy:**
+```
+batch-dispatch({
+  batchPattern: "free-plan-review",
+  prompt: "Review this implementation plan for completeness, correctness, and risks:\n\n{full plan content}\n\nRespond with APPROVE, IMPROVE: {list}, or REJECT: {list}."
+})
+```
+Aggregate results: if majority APPROVE → proceed. If majority IMPROVE or REJECT → apply most-mentioned improvements and re-review.
 
 **If dispatch unavailable:**
 Self-review the plan against this checklist:
@@ -223,7 +235,8 @@ If rejected twice: STOP and surface the issue to the user.
 #### Master + Sub-Plan Mode
 
 1. Review master plan first, then each sub-plan sequentially.
-2. All artifacts must be approved before proceeding to Step 4.
+2. For each sub-plan, apply the same depth-conditional dispatch logic above (light → `dispatch`, standard/heavy → `batch-dispatch({ batchPattern: "free-plan-review" })`).
+3. All artifacts must be approved before proceeding to Step 4.
 
 ---
 
@@ -332,13 +345,44 @@ This is the quality gate. Runs until code is clean or issues are classified as a
 
 #### 7a: Run Code Review
 
-**If dispatch available**, dispatch reviews based on depth label:
+**If dispatch available**, run the free review gauntlet by depth. Use this prompt for all patterns:
 
-| Depth | Review Approach |
-|-------|----------------|
-| **light** | 1-2 model review |
-| **standard** | 3-5 model parallel review with consensus |
-| **heavy** | Full model gauntlet + T4 + T5 |
+```
+REVIEW_PROMPT = "Review the following code changes for Critical and Major issues only.\n\n{git diff HEAD}\n\nRespond with:\n- ISSUES FOUND: [list each issue as: Severity | File:Line | Description]\n- NO ISSUES: code is clean."
+```
+
+> Note: If `git diff HEAD` exceeds 200 lines, include only the changed files list + first 200 lines of diff.
+
+**light:**
+```
+batch-dispatch({
+  batchPattern: "free-impl-validation",
+  prompt: REVIEW_PROMPT,
+})
+```
+3 models (GLM-5, GLM-4.7-FLASH, DeepSeek-V3.2) in parallel. Read `escalationAction` from output.
+
+**standard:**
+```
+batch-dispatch({
+  batchPattern: "free-review-gauntlet",
+  prompt: REVIEW_PROMPT,
+})
+```
+5 models (GLM-5, GLM-4.5, Qwen3-CODER-PLUS, GLM-4.7-FLASH, DeepSeek-V3.2) in parallel. Read `escalationAction` from output.
+
+**heavy:**
+```
+batch-dispatch({
+  batchPattern: "free-review-gauntlet",
+  prompt: REVIEW_PROMPT,
+})
+```
+5 models in parallel. Then unconditionally:
+```
+dispatch({ taskType: "codex-review", prompt: REVIEW_PROMPT })
+dispatch({ taskType: "sonnet-46-review", prompt: REVIEW_PROMPT })
+```
 
 **If dispatch unavailable:**
 Run thorough self-review using `/code-review` methodology:
@@ -361,10 +405,21 @@ Collect all findings. Deduplicate. Classify each finding:
 | **0 issues / only Minor / only false-positives** | Exit loop → Step 7d (final review) |
 | **Critical/Major fixable** | Continue to 7c |
 
-**Consensus gating (when dispatch available with multiple reviewers):**
-- Majority say clean → proceed to Step 7d
-- Mixed results → dispatch to T3/T4 as tiebreaker
-- Majority say issues → fix → re-review
+**Consensus gating — read `escalationAction` from `batch-dispatch` output:**
+
+> The `escalationAction` value appears in the `## Consensus Analysis` table of the batch-dispatch output, in the row labelled `| Escalation action | **{value}** |`.
+
+| `escalationAction` | Meaning | Action |
+|--------------------|---------|--------|
+| `skip-t4` | 0-1 models found issues | Proceed to Step 7d. $0 paid cost. |
+| `run-t4` | 2 models found issues | `dispatch({ taskType: "codex-review", prompt: REVIEW_PROMPT })` as tiebreaker, then 7d. |
+| `fix-and-rerun` | 3+ models found issues | Go to 7c (fix loop). After fix, re-run 7a gauntlet. Max 3 re-gauntlet iterations. |
+
+**For light depth** (no `batch-dispatch` escalationAction available):
+- 0 issues → Step 7d
+- Any Critical/Major → 7c
+
+**For heavy depth**: skip escalationAction — T4 and T5 always run regardless of consensus.
 
 #### 7c: Fix Loop (unlimited — until fixed or stuck)
 
