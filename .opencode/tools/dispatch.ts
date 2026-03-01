@@ -268,12 +268,13 @@ async function dispatchAgent(
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        model: { providerID: provider, modelID: model }, // top-level model routes the message
         parts: [{
           type: "subtask",
           prompt,
           description,
-          agent: "default",
-          model: { providerID: provider, modelID: model },
+          agent: "general",
+          model: { providerID: provider, modelID: model }, // subtask part model (for child agent)
         }],
       }),
       signal: AbortSignal.timeout(timeoutMs),
