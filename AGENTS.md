@@ -33,9 +33,10 @@ This repository contains an AI-assisted development framework with structured wo
 ### Dynamic Content (`.agents/`)
 All generated/dynamic content lives at project root:
 - `.agents/features/{name}/` — All artifacts for one feature (plan, report, review, loop reports)
-  - `plan.md` / `plan.done.md` — Feature plan (marked done after execution)
-  - `plan-master.md` — Master plan for multi-phase features
-  - `plan-phase-{N}.md` — Sub-plans for each phase
+  - `plan.md` / `plan.done.md` — Feature plan overview + task index (marked done when all task briefs done)
+  - `task-{N}.md` / `task-{N}.done.md` — Task briefs (one per `/execute` session, default mode)
+  - `plan-master.md` — Master plan for very large multi-phase features (escape hatch)
+  - `plan-phase-{N}.md` — Sub-plans for each phase (executed one per session, not sequentially)
   - `report.md` / `report.done.md` — Execution report (marked done after commit)
   - `review.md` / `review.done.md` — Code review (marked done when addressed)
   - `review-{N}.md` — Numbered reviews from `/code-loop` iterations
@@ -44,12 +45,14 @@ All generated/dynamic content lives at project root:
   - `fixes-{N}.md` — Fix plans from `/code-loop`
 - `.agents/specs/` — BUILD_ORDER, PILLARS, build-state.json
 - `.agents/context/` — Session context
+  - `next-command.md` — Pipeline handoff file (auto-updated by every pipeline command, read by `/prime`)
 
 #### `.done.md` Lifecycle
 
 | Artifact | Created by | Marked `.done.md` by | Trigger |
 |----------|-----------|---------------------|---------|
-| `plan.md` | `/planning` | `/execute` | All plan tasks completed |
+| `plan.md` | `/planning` | `/execute` | All task briefs done (or legacy single plan executed) |
+| `task-{N}.md` | `/planning` | `/execute` | Task brief fully executed in one session |
 | `plan-master.md` | `/planning` | `/execute` | All phases completed |
 | `plan-phase-{N}.md` | `/planning` | `/execute` | Phase fully executed |
 | `report.md` | `/execute` | `/commit` | Changes committed to git |
@@ -57,6 +60,69 @@ All generated/dynamic content lives at project root:
 | `review-{N}.md` | `/code-loop` | `/code-loop` | Clean exit |
 | `loop-report-{N}.md` | `/code-loop` | `/code-loop` | Clean exit |
 | `fixes-{N}.md` | `/code-loop` | `/code-loop` | Fixes fully applied |
+
+#### Pipeline Handoff File
+
+`.agents/context/next-command.md` is a **singleton** file overwritten by every pipeline command on completion. It tracks the current pipeline position so that `/prime` can surface "what to do next" when starting a new session.
+
+| Field | Purpose |
+|-------|---------|
+| **Last Command** | Which command just completed |
+| **Feature** | Active feature name |
+| **Next Command** | Exact command to run next |
+| **Master Plan** | Path to master plan (if multi-phase) |
+| **Phase Progress** | N/M complete (if multi-phase) |
+| **Task Progress** | N/M complete (if task brief mode) |
+| **Timestamp** | When handoff was written |
+| **Status** | Pipeline state (awaiting-execution, executing-tasks, executing-series, awaiting-review, awaiting-fixes, awaiting-re-review, ready-to-commit, ready-for-pr, pr-open, blocked, build-loop-continuing) |
+
+The handoff file is NOT a log — it only contains the latest state. History lives in git commits and `.done.md` artifacts.
+
+#### Feature Name Propagation
+
+The **Feature** field in the handoff file is the canonical source for feature names. All pipeline commands must:
+1. **Read** the Feature field from `.agents/context/next-command.md` first
+2. **Fall back** to derivation (commit scope, report path, directory name) only if the handoff is missing or stale
+3. **Write** the same Feature value to the handoff when completing
+
+This ensures consistent feature names across sessions. If a command derives a feature name from a fallback source, it must match the handoff value. If they conflict, the handoff value wins.
+
+#### Session Model (One Command Per Context Window)
+
+Each session is one model context window. The autonomous flow is:
+
+```
+Session:  /prime → [one command] → END
+```
+
+**Task brief feature (default):**
+```
+Session 1:  /prime → /planning {feature}                         → END (plan.md + task-N.md files written)
+Session 2:  /prime → /execute .agents/features/{f}/plan.md       → END (task 1 only — auto-detected)
+Session 3:  /prime → /execute .agents/features/{f}/plan.md       → END (task 2 — auto-detected)
+Session N+1:/prime → /execute .agents/features/{f}/plan.md       → END (task N — auto-detected)
+Session N+2:/prime → /code-loop {feature}                        → END
+Session N+3:/prime → /commit → /pr                               → END (both in same session)
+```
+
+**Master plan feature (multi-phase, escape hatch for 10+ task features):**
+```
+Session 1:  /prime → /planning {feature}                         → END (master + sub-plans written)
+Session 2:  /prime → /execute .../plan-master.md                 → END (phase 1 only)
+Session 3:  /prime → /execute .../plan-master.md                 → END (phase 2 — auto-detected)
+Session 4:  /prime → /execute .../plan-master.md                 → END (phase N — auto-detected)
+Session 5:  /prime → /code-loop {feature}                        → END
+Session 6:  /prime → /commit → /pr                               → END (both in same session)
+```
+
+**Key rules:**
+- `/execute` with task briefs executes ONE brief per session, never loops through all briefs
+- `/execute` with a master plan executes ONE phase per session, never loops through all phases
+- The handoff file tells the next session exactly what to run — the user just runs `/prime`
+- Task brief detection is automatic: `/execute plan.md` scans for `task-{N}.done.md` files and picks the next undone brief
+- Phase detection is automatic: `/execute plan-master.md` scans for `.done.md` files and picks the next undone phase
+- If a session crashes, the brief/phase wasn't marked `.done.md`, so the next session retries it
+- `/commit → /pr` runs in the same session when they are the final pipeline step. `/commit` writes a `ready-for-pr` handoff, but `/pr` runs immediately after (not in a separate session). If `/pr` fails, its failure handoff persists for the next `/prime` session.
 
 ### Static Configuration (`.opencode/`)
 System configuration and reusable assets:
@@ -81,7 +147,10 @@ System configuration and reusable assets:
 | `/code-loop` | Automated review → fix → commit cycle |
 | `/system-review` | Divergence analysis (plan vs implementation) |
 | `/commit` | Conventional git commit |
+| `/pr` | Create pull request from feature commits |
 | `/sync` | Check Archon sync status |
+| `/final-review` | Optional: human approval gate before commit |
+| `/code-review-fix` | Apply fixes from code review findings |
 
 ---
 

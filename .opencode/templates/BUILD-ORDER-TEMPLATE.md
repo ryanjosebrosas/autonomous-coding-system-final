@@ -49,11 +49,13 @@ Status: 0/{total} complete
 
 ## Complexity Guide
 
-| Tag | Plan Size | When |
-|-----|-----------|------|
-| `light` | ~100 lines | Scaffolding, config, simple CRUD, well-known patterns |
-| `standard` | ~300 lines | Services, integrations, moderate business logic |
-| `heavy` | ~700 lines | Core algorithms, AI/ML, complex orchestration |
+**Every spec gets a 700-1000 line plan regardless of depth.** The depth tag controls the review tier in `/build` Step 7, not plan size.
+
+| Tag | Review Tier | When |
+|-----|------------|------|
+| `light` | T1-T2 (3 free models) | Scaffolding, config, simple CRUD, well-known patterns |
+| `standard` | T1-T3 + consensus (5 free models) | Services, integrations, moderate business logic |
+| `heavy` | Full T1-T4 + T5 (5 free + 2 paid) | Core algorithms, AI/ML, complex orchestration |
 
 ## Spec Format Reference
 

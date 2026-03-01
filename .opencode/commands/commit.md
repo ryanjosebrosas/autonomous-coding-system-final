@@ -73,11 +73,43 @@ git show --stat
 
 Append to memory.md: session note, any lessons/gotchas/decisions discovered. Keep entries 1-2 lines each. Don't repeat existing entries. Skip if memory.md doesn't exist.
 
+### 5.5. Pipeline Handoff Write (required)
+
+After successful commit, overwrite `.agents/context/next-command.md`:
+
+```markdown
+# Pipeline Handoff
+<!-- Auto-updated by pipeline commands. Read by /prime. Do not edit manually. -->
+
+- **Last Command**: /commit
+- **Feature**: {feature, from commit scope or .agents/context/next-command.md}
+- **Next Command**: /pr {feature}
+- **Timestamp**: {ISO 8601 timestamp}
+- **Status**: ready-for-pr
+```
+
+Derive `{feature}` from: (1) the commit scope (e.g., `feat(auth): ...` → `auth`), (2) the previous handoff file's Feature field, or (3) the most recent `.agents/features/*/report.md`.
+
+If in a `/build` loop, set **Next Command** to `/build next` and **Status** to `build-loop-continuing`.
+
+**If commit fails** (e.g., pre-commit hooks, merge conflict, empty commit): Write handoff with the previous feature name preserved:
+```markdown
+# Pipeline Handoff
+<!-- Auto-updated by pipeline commands. Read by /prime. Do not edit manually. -->
+
+- **Last Command**: /commit (failed)
+- **Feature**: {feature}
+- **Next Command**: /commit
+- **Timestamp**: {ISO 8601 timestamp}
+- **Status**: blocked
+```
+Report the error clearly: what failed, why, and what the user should do to fix it. Do NOT leave the handoff stale from the previous command.
+
 ### 6. Report Completion
 
 Report the commit details and suggest next steps based on context:
 - If in a `/build` loop: "Spec committed. Continuing to next spec."
-- If standalone: "Committed. Next: `git push` or continue development."
+- If standalone: "Committed. Next: `/pr {feature}` or `git push` or continue development."
 
 ## Notes
 

@@ -1,15 +1,14 @@
 # Master Plan Template
 
-> Use this for complex features with 10+ tasks or multiple distinct phases.
+> Use this for features with multiple distinct phases and heavy cross-phase dependencies.
 > Save to `.agents/features/{feature}/plan-master.md` and fill in every section.
 >
-> **When to use**: Complex features that need multiple sub-plans (one per phase).
+> **When to use**: Features that need multiple sub-plans because phases have independent validation gates and distinct dependencies — not because of task count alone.
 > **Typical**: 2-4 phases. 1 phase per 3-5 tasks.
 > **Target Length**: This master plan should be **~500 lines** when filled.
 > The detailed step-by-step tasks live in the sub-plans, not here.
 >
-> **For simpler features**: Use `STRUCTURED-PLAN-TEMPLATE.md` directly for features
-> with <10 tasks that fit in one 700-1000 line plan.
+> **For most features**: Use `STRUCTURED-PLAN-TEMPLATE.md` directly — task brief mode scales to any task count and is the right default.
 
 ---
 
@@ -40,7 +39,7 @@ As a {user type}, I want to {action}, so that {benefit}.
 - **Primary Systems Affected**: {list all components/services}
 - **Dependencies**: {external libraries or services required}
 - **Total Phases**: {N}
-- **Total Estimated Tasks**: {10+}
+- **Total Estimated Tasks**: {N — distributed across phases}
 
 ### Slice Guardrails (Whole Feature)
 

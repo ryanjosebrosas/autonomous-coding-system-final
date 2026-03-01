@@ -625,32 +625,32 @@ grep -n "^## Step [1-7]:" .opencode/commands/pr.md
 
 ### Implementation
 
-- [ ] Step 2 branch derivation uses three-priority order: `$ARGUMENTS` → `FEATURE_NAME` → commit message
-- [ ] Step 2a detects `FEATURE_NAME` from `$ARGUMENTS` or latest report file scan, with null fallback
-- [ ] Step 2b defines four-path lookup order: canonical `report.md`, canonical `report.done.md`, legacy `report.md`, legacy `report.done.md`
-- [ ] Step 2b parse instructions handle `Files modified` and `Files added` lines, strip backticks, skip `None`
-- [ ] Step 2c runs `git log {REMOTE}/{MAIN_BRANCH}..HEAD --oneline -- {FEATURE_FILES}` to produce `PR_COMMITS`
-- [ ] Step 2c fallback documented: no report found → show all unpushed commits + confirmation prompt
-- [ ] Step 2c detection result display block present before proceeding
-- [ ] Step 5 canonical report path listed first, legacy path as fallback
-- [ ] Step 5 review artifact path updated to include `.agents/features/{FEATURE_NAME}/review.done.md`
-- [ ] No other steps of `pr.md` modified
+- [x] Step 2 branch derivation uses three-priority order: `$ARGUMENTS` → `FEATURE_NAME` → commit message
+- [x] Step 2a detects `FEATURE_NAME` from `$ARGUMENTS` or latest report file scan, with null fallback
+- [x] Step 2b defines four-path lookup order: canonical `report.md`, canonical `report.done.md`, legacy `report.md`, legacy `report.done.md`
+- [x] Step 2b parse instructions handle `Files modified` and `Files added` lines, strip backticks, skip `None`
+- [x] Step 2c runs `git log {REMOTE}/{MAIN_BRANCH}..HEAD --oneline -- {FEATURE_FILES}` to produce `PR_COMMITS`
+- [x] Step 2c fallback documented: no report found → show all unpushed commits + confirmation prompt
+- [x] Step 2c detection result display block present before proceeding
+- [x] Step 5 canonical report path listed first, legacy path as fallback
+- [x] Step 5 review artifact path updated to include `.agents/features/{FEATURE_NAME}/review.done.md`
+- [x] No other steps of `pr.md` modified
 
 ### Runtime
 
-- [ ] A model running `/pr` after a clean single-feature loop can identify `PR_COMMITS` without user input
-- [ ] A model running `/pr` with multiple stacked features on master sees the detection result and can abort if wrong
-- [ ] A model running `/pr` with no report file falls back gracefully to the full unpushed commit list
+- [x] A model running `/pr` after a clean single-feature loop can identify `PR_COMMITS` without user input
+- [x] A model running `/pr` with multiple stacked features on master sees the detection result and can abort if wrong
+- [x] A model running `/pr` with no report file falls back gracefully to the full unpushed commit list
 
 ---
 
 ## Completion Checklist
 
-- [ ] Task 1 completed (Step 2 auto-detection rewritten)
-- [ ] Task 2 completed (branch name derivation updated to use FEATURE_NAME)
-- [ ] Task 3 completed (Step 5 report paths fixed)
-- [ ] All validation commands pass
-- [ ] Acceptance criteria all met
+- [x] Task 1 completed (Step 2 auto-detection rewritten)
+- [x] Task 2 completed (branch name derivation updated to use FEATURE_NAME)
+- [x] Task 3 completed (Step 5 report paths fixed)
+- [x] All validation commands pass
+- [x] Acceptance criteria all met
 
 ---
 

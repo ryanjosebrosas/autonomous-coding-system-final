@@ -89,7 +89,7 @@ Three TypeScript tools in `.opencode/tools/` enable multi-model orchestration vi
 | `council` | Multi-model discussion (models see each other's responses) | Shared session; structured or freeform modes; auto-selects 4 diverse models |
 
 **Requires**: `opencode serve` running (server at `http://127.0.0.1:4096`).
-**Primer**: `_dispatch-primer.md` auto-prepended to every dispatch and council — ensures all models have project context, core principles, and methodology.
+**Context delivery**: In `agent` mode, dispatched models receive context through their native tool access — they read AGENTS.md, memory.md, and relevant files directly using file tools. In `text` mode, the calling model is responsible for including all necessary context in the prompt (git diff, plan excerpts, file contents, etc.). There is no automatic primer file — context must be explicitly provided.
 
 **Pre-dispatch**: Always run `/prime` before your first dispatch in any session to ensure models have fresh project context.
 

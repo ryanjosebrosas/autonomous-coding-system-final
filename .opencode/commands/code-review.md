@@ -17,13 +17,20 @@ Run a comprehensive code review. Reports findings only — does NOT implement fi
 ## Usage
 
 ```
-/code-review [target]
+/code-review [target] [--feature feature-name]
 ```
 
 `$ARGUMENTS` — What to review:
 - Empty (default): review all uncommitted changes (`git diff` + `git diff --cached`)
 - File path: review a specific file
 - `last-commit`: review changes in the most recent commit
+
+`--feature feature-name` — Explicit feature name for the review artifact directory:
+- When provided: save review to `.agents/features/{feature-name}/review.md`
+- When omitted: derive feature name using this priority order:
+  1. Read `.agents/context/next-command.md` — use the **Feature** field if it exists
+  2. Scan `.agents/features/*/report.md` (non-done) — use the most recently modified feature
+  3. Fall back to deriving from the primary changed file's module/directory name
 
 ---
 
@@ -122,15 +129,59 @@ Check for issues at three severity levels:
 
 ## Step 4: Dispatch for Second Opinions (Optional)
 
-For security-sensitive or architecturally complex changes, get a second opinion:
+For security-sensitive or architecturally complex changes, get a second opinion.
+
+**When to dispatch:**
+- Changes touch auth, crypto, payments, or data handling (security-sensitive)
+- Changes span multiple interconnected files (architecture risk)
+- First pass found 0 issues (sanity check — did we miss something?)
+- Review confidence is low
+
+**When to skip dispatch:**
+- Trivial changes (typos, formatting, docs-only)
+- Previous dispatch round added no new findings
 
 **If dispatch available:**
 
-| Concern | Tier | Approach |
-|---------|------|----------|
-| Security review | T2 | Dispatch security-focused review |
-| Architecture | T2 | Dispatch architecture audit |
-| Logic verification | T2 | Dispatch logic review |
+```
+REVIEW_PROMPT = "Review the following code changes for Critical and Major issues only.\n\n{git diff or file content}\n\nRespond with:\n- ISSUES FOUND: [list each issue as: Severity | File:Line | Description]\n- NO ISSUES: code is clean."
+```
+
+**Security-sensitive changes:**
+```
+dispatch({
+  taskType: "security-review",
+  prompt: REVIEW_PROMPT,
+})
+```
+
+**Architecture-heavy changes:**
+```
+dispatch({
+  taskType: "architecture-audit",
+  prompt: REVIEW_PROMPT,
+})
+```
+
+**General second opinion (default):**
+```
+dispatch({
+  taskType: "code-review",
+  prompt: REVIEW_PROMPT,
+})
+```
+
+**Multiple concerns — run gauntlet:**
+```
+batch-dispatch({
+  batchPattern: "free-impl-validation",
+  prompt: REVIEW_PROMPT,
+})
+```
+Read `escalationAction` from the `## Consensus Analysis` table in the output:
+- `skip-t4` → 0-1 models found issues → proceed to Step 5
+- `run-t4` → 2 models found issues → one more dispatch tiebreaker, then Step 5
+- `fix-and-rerun` → 3+ models found issues → surface findings in Step 5
 
 **If dispatch unavailable:** Proceed with your own thorough review. Consider reviewing from multiple angles (security, performance, architecture) sequentially.
 
@@ -178,7 +229,33 @@ Recommendation: {PASS / FIX CRITICAL / FIX MAJOR}
 
 **Output file**: Save review to `.agents/features/{feature}/review.md`
 Create the `.agents/features/{feature}/` directory if it doesn't exist.
-Derive `{feature}` from the most relevant context: if reviewing changes from a plan execution, use the plan's feature name. If reviewing standalone changes, derive from the primary file's module/directory name.
+Derive `{feature}` using the `--feature` argument if provided. Otherwise, use the priority order from the Usage section above (handoff file → recent report → primary file's module name).
+
+**Pipeline Handoff Write** (required): After saving the review, overwrite `.agents/context/next-command.md`:
+```markdown
+# Pipeline Handoff
+<!-- Auto-updated by pipeline commands. Read by /prime. Do not edit manually. -->
+
+- **Last Command**: /code-review
+- **Feature**: {feature}
+- **Next Command**: /code-review-fix .agents/features/{feature}/review.md critical+major
+- **Timestamp**: {ISO 8601 timestamp}
+- **Status**: awaiting-fixes
+```
+If review found 0 issues, set **Next Command** to `/commit` and **Status** to `ready-to-commit`.
+
+**If code review fails** (e.g., cannot read changed files, git state corrupted, no changes found when changes expected): Write handoff preserving the feature context:
+```markdown
+# Pipeline Handoff
+<!-- Auto-updated by pipeline commands. Read by /prime. Do not edit manually. -->
+
+- **Last Command**: /code-review (failed)
+- **Feature**: {feature}
+- **Next Command**: /code-review --feature {feature}
+- **Timestamp**: {ISO 8601 timestamp}
+- **Status**: blocked
+```
+Report the error clearly: what failed and what the user should check. Note: "No changes to review" on a clean tree is NOT a failure — do not write a blocked handoff in that case.
 
 ---
 

@@ -2,7 +2,7 @@
 
 ## Meta Information
 
-- **Plan file**: `.agents/features/build-autonomous-readiness/plan.md`
+- **Plan file**: `.agents/features/build-autonomous-readiness/plan.done.md`
 - **Plan checkboxes updated**: yes
 - **Files added**: None
 - **Files modified**:

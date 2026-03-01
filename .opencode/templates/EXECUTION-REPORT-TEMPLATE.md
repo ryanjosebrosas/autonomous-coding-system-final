@@ -40,12 +40,25 @@ Verdict:    {COMPLETE | INCOMPLETE — see gaps above}
 
 ## Completed Tasks
 
-For each task in the plan:
+**For single-plan execution:** List all tasks inline:
 
-- **Task {N}**: {brief description} — {completed / skipped with reason}
 - **Task {N}**: {brief description} — {completed / skipped with reason}
 
 **Summary**: {X}/{Y} tasks completed ({Z}%)
+
+**For multi-task brief execution:** Each task brief session appends a section:
+
+### Task {N}: {task title}
+
+- **Brief**: `task-{N}.md`
+- **Status**: completed / skipped / partial
+- **Files added**: {list}
+- **Files modified**: {list}
+- **Divergences**: {count — Good: X, Bad: Y, or "None"}
+- **Validation**: L1 {pass/fail} | L2 {pass/fail} | L3 {pass/fail}
+- **Notes**: {any issues or observations}
+
+*(Each `/execute` session appends one of these sections. Do NOT overwrite previous task sections.)*
 
 ---
 
@@ -191,7 +204,8 @@ For each task in the plan:
 
 > Before finishing, rename completed artifacts within `.agents/features/{feature}/`:
 
-- `plan.md` → `plan.done.md` (plan fully executed)
+- `task-{N}.md` → `task-{N}.done.md` (completed task brief — done after each brief execution)
+- `plan.md` → `plan.done.md` (only when ALL task briefs done, OR legacy single plan fully executed)
 - `plan-phase-{N}.md` → `plan-phase-{N}.done.md` (per completed phase)
 - `plan-master.md` → `plan-master.done.md` (only when ALL phases done)
 - `review.md` → `review.done.md` (if findings addressed)

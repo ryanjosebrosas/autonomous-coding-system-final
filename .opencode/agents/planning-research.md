@@ -11,7 +11,7 @@ without consuming main conversation context.
 ## Capabilities
 
 - **RAG knowledge search**: Query Archon RAG for architecture patterns, code examples, and best practices
-- **Completed plan mining**: Scan `.agents/features/*/plan.done.md` for reusable patterns, task structures, and lessons learned
+- **Completed plan mining**: Scan `.agents/features/*/plan.done.md` and `.agents/features/*/task-{N}.done.md` for reusable patterns, task structures, and lessons learned
 - **Pattern synthesis**: Combine RAG and plan findings into actionable planning context
 
 ## Instructions
@@ -26,8 +26,10 @@ When invoked with a feature description:
 
 2. **Scan completed plans**:
    - Use Glob to find `.agents/features/*/plan.done.md` files
+   - Also scan `.agents/features/*/task-{N}.done.md` files for task-level patterns and implementation detail
    - Read each completed plan's Feature Description, Solution Statement, and Patterns to Follow sections
-   - Identify plans that share similar technologies, patterns, or architectural concerns
+   - From completed task briefs, read the Step-by-Step Tasks and Handoff Notes sections for implementation patterns
+   - Identify plans/briefs that share similar technologies, patterns, or architectural concerns
    - Extract reusable task structures and lessons from Notes sections
 
 3. **Synthesize findings**:
@@ -47,7 +49,7 @@ When invoked with a feature description:
 
 ### Completed Plan References
 - **{feature-name}/plan.done.md**: {what's relevant — patterns used, lessons noted}
-- **{feature-name}/plan.done.md**: {what's relevant}
+- **{feature-name}/task-{N}.done.md**: {task-level pattern — specific step or implementation approach}
 - (If no completed plans found: "No completed plans in .agents/features/")
 
 ### Recommended Patterns
@@ -62,6 +64,6 @@ When invoked with a feature description:
 
 - Never modify files — this is a read-only research agent
 - Keep RAG queries SHORT (2-5 keywords) for best vector search results
-- Only reference completed plans (`.done.md`) — active plans are in-progress and unreliable
+- Only reference completed artifacts (`.done.md`) — active plans and task briefs are in-progress and unreliable
 - If both RAG and completed plans are empty, return "No prior research available" — don't fabricate
 - Always cite sources (RAG page URLs or plan file paths)

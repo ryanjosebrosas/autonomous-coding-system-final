@@ -38,25 +38,83 @@ Each PR gets its own branch. The branch name should reflect the specific feature
 
 **Branch naming convention**: `feat/<short-name>`, `fix/<short-name>`, `chore/<short-name>`
 
+> Note: `FEATURE_NAME` is resolved in Step 2a below — read the full step before deriving the branch name.
+
 Derive the branch name:
-1. If `$ARGUMENTS` contains a feature name → use it (e.g., `feat/supabase-provider`)
-2. Otherwise → derive from the latest commit message:
+1. If `$ARGUMENTS` contains a feature name → use it directly (e.g., `feat/supabase-provider`)
+2. If `FEATURE_NAME` detected from report (Step 2a below) → use it: `feat/{FEATURE_NAME}` (or `fix/` / `chore/` based on the commit type of `PR_COMMITS`)
+3. Otherwise → derive from the latest commit message:
    - `feat(memory): add Supabase provider` → `feat/supabase-provider`
    - `fix(rerank): handle empty results` → `fix/rerank-empty-results`
 
-**Determine which commits belong to this PR:**
+---
+
+**Auto-detect feature and scope commits from execution report:**
+
+**Step 2a — Identify the feature:**
+1. If `$ARGUMENTS` is a feature slug (e.g., `/pr build-batch-dispatch-wiring`) → `FEATURE_NAME = $ARGUMENTS`
+2. Otherwise → find the most recently modified report file:
+   - Unix: `ls -t .agents/features/*/report.md .agents/features/*/report.done.md 2>/dev/null | head -1`
+   - Windows: check each path in `.agents/features/*/report.md` and `.agents/features/*/report.done.md` directly, use the one with the latest modification time
+   - Extract `FEATURE_NAME` from the result: the directory segment between `features/` and the filename.
+     Example: `.agents/features/build-batch-dispatch-wiring/report.done.md` → `FEATURE_NAME = build-batch-dispatch-wiring`
+3. If no report found → `FEATURE_NAME = null`, skip to fallback at end of Step 2c.
+
+**Step 2b — Locate report and parse files touched:**
+
+Try each path in order, use the first that exists:
+```
+.agents/features/{FEATURE_NAME}/report.md        ← canonical active
+.agents/features/{FEATURE_NAME}/report.done.md   ← canonical done
+.agents/reports/{FEATURE_NAME}-report.md         ← legacy active
+.agents/reports/{FEATURE_NAME}-report.done.md    ← legacy done
+```
+
+Store the found path as `REPORT_PATH`.
+
+From the `## Meta Information` section of `REPORT_PATH`, parse:
+- Lines matching `- **Files modified**: {value}` — extract `{value}`
+- Lines matching `- **Files added**: {value}` — extract `{value}`
+- If `{value}` is exactly `None` → skip that line
+- Otherwise: split `{value}` on `,` → for each item: trim whitespace → strip surrounding backticks → add to list
+- Stop parsing at the next `##` header
+
+Collect all resulting paths into `FEATURE_FILES`.
+
+**Step 2c — Intersect with unpushed commits:**
 
 ```bash
-# Show commits on current branch not yet on remote main — these are the candidates
+# Find unpushed commits that touched the feature's files only
+git log {REMOTE}/{MAIN_BRANCH}..HEAD --oneline -- {FEATURE_FILES}
+```
+
+Store the SHA list as `PR_COMMITS` (oldest first).
+
+**If `PR_COMMITS` is empty** (feature already pushed, or files not in git log):
+Report: "No unpushed commits found touching `{FEATURE_FILES}` — feature may already be pushed."
+Fall back to full unpushed list:
+```bash
+git log {REMOTE}/{MAIN_BRANCH}..HEAD --oneline
+```
+Ask user to confirm which commits to include.
+
+**If `REPORT_PATH` not found or `FEATURE_FILES` is empty** (no report, or both lines were `None`):
+Report: "No execution report found for `{FEATURE_NAME}`. Showing all unpushed commits."
+Fall back to:
+```bash
 git log {REMOTE}/{MAIN_BRANCH}..HEAD --oneline
 ```
 
-- Default: commits since the last push to remote main (everything in the above list)
-- If the list has commits from multiple unrelated features: ask the user which ones to include
-- If `$ARGUMENTS` specifies a count (e.g., `last 3`): use the last N commits
-- **Never include commits that are already on `{REMOTE}/{MAIN_BRANCH}`**
+**Display detection result before proceeding** (always show, even in fallback):
+```
+Feature detected:  {FEATURE_NAME}   (or "unknown" if null)
+Report:            {REPORT_PATH}    (or "not found")
+Files touched:     {FEATURE_FILES}  (or "none detected")
+Commits selected:  {PR_COMMITS}
 
-Store the selected commit hashes as `PR_COMMITS` — these are the only commits going into the PR.
+Proceeding with {N} commit(s) → {branch-name}
+Abort with Ctrl+C if this scope is wrong.
+```
 
 ---
 
@@ -124,11 +182,22 @@ git diff {REMOTE}/{MAIN_BRANCH}...<branch-name>
 ```
 
 Also read (if they exist) for richer PR body context:
-- `.agents/reports/{feature}-report.md` — execution summary, validation results
-- `.agents/reviews/{feature}*.done.md` — what was reviewed and resolved
+- `{REPORT_PATH}` — execution report (already resolved in Step 2b; contains validation results, files changed, task summary)
+- `.agents/features/{FEATURE_NAME}/review.done.md` — code review findings addressed this loop
+- `.agents/reviews/{FEATURE_NAME}*.done.md` — legacy review location fallback
 
 **If dispatch available:**
-Dispatch to T1 for PR title + body generation with the git context.
+
+```
+PR_PROMPT = "Generate a pull request title and body for the following changes.\n\nCommits:\n{git log output}\n\nDiff stats:\n{git diff --stat output}\n\nFull diff:\n{git diff output, truncated to 300 lines if needed}\n\nExecution report summary:\n{REPORT_PATH summary if available}\n\nOutput format:\nTitle: type(scope): description (conventional commit format, max 72 chars)\n\nBody:\n## What\n- {2-4 bullets: what changed, specific and concrete}\n\n## Why\n{1-2 sentences: why this was needed}\n\n## Changes\n{Files changed grouped by area with 1-line description each}\n\n## Testing\n{Test results, validation commands run, pass/fail}\n\n## Notes\n{Breaking changes, migration steps, known skips — or None}"
+
+dispatch({
+  taskType: "pr-description",
+  prompt: PR_PROMPT,
+})
+```
+
+Use the dispatched output as the PR title and body verbatim. If the output is malformed or too short, fall back to generating directly.
 
 **If dispatch unavailable:**
 Generate directly:
@@ -189,6 +258,36 @@ Current: Back on <original-branch>
 
 Next: Wait for review, then merge or address feedback.
 ```
+
+### Pipeline Handoff Write (required)
+
+After PR creation, overwrite `.agents/context/next-command.md`:
+
+```markdown
+# Pipeline Handoff
+<!-- Auto-updated by pipeline commands. Read by /prime. Do not edit manually. -->
+
+- **Last Command**: /pr
+- **Feature**: {feature}
+- **Next Command**: [pipeline complete — PR open at {pr-url}]
+- **Timestamp**: {ISO 8601 timestamp}
+- **Status**: pr-open
+```
+
+This is a terminal handoff — the pipeline is complete for this feature. `/prime` will show this as informational ("Last feature PR'd: {feature}") rather than actionable.
+
+**If PR creation fails** (e.g., `gh` not authenticated, network error, cherry-pick conflict, branch already exists): Write handoff preserving the feature context:
+```markdown
+# Pipeline Handoff
+<!-- Auto-updated by pipeline commands. Read by /prime. Do not edit manually. -->
+
+- **Last Command**: /pr (failed)
+- **Feature**: {feature}
+- **Next Command**: /pr {feature}
+- **Timestamp**: {ISO 8601 timestamp}
+- **Status**: blocked
+```
+Report the error clearly: what failed (cherry-pick conflict? auth? network?), what the user should do (resolve conflict, run `gh auth login`, retry). Clean up any partial state (delete local feature branch if push failed).
 
 ---
 

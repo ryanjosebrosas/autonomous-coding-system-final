@@ -41,17 +41,37 @@ Incremental execution guardrails (required):
 
 Read the plan file.
 
-**If file path contains `plan-master.md`**: Extract phase sub-plan paths from the SUB-PLAN INDEX table at the bottom of the master plan. Report: "Detected master plan with N phases." Proceed to Series Mode (Step 2.5).
+**If file path contains `plan-master.md`**: This is a multi-phase feature. Execute ONE phase per session:
+1. Extract phase sub-plan paths from the SUB-PLAN INDEX table at the bottom of the master plan
+2. Scan `.agents/features/{feature}/` for `plan-phase-{N}.done.md` files to determine which phases are complete
+3. Identify the next undone phase (lowest N without a matching `.done.md`)
+4. **If ALL phases are done** → report "All {total} phases complete. Feature ready for `/code-loop {feature}`." Write handoff with **Status** `awaiting-review` and **Next Command** `/code-loop {feature}`. Rename `plan-master.md` → `plan-master.done.md`. **Stop — do not execute anything.**
+5. **If a next phase exists** → report "Master plan: phase {N}/{total}. Executing plan-phase-{N}.md in this session."
+   - Read SHARED CONTEXT REFERENCES from the master plan
+   - If a previous phase exists (`plan-phase-{N-1}.done.md`), read its HANDOFF NOTES section for continuity context
+   - Proceed to execute ONLY `plan-phase-{N}.md` as a single sub-plan (Step 1 onward). After execution completes, proceed to Step 2.5 for phase completion.
 
-**If file path is a single phase file (`-phase-{N}.md`)**: Execute as a single sub-plan (normal mode, but note it's part of a larger feature).
+**If file path is a single phase file (`-phase-{N}.md`)**: Execute as a single sub-plan (normal mode, but note it's part of a larger feature). If `plan-master.md` exists in the same directory, read its SHARED CONTEXT REFERENCES for additional context. After execution completes, proceed to Step 2.5 for phase completion.
 
-**If file contains `<!-- PLAN-SERIES -->`**: Extract sub-plan paths from PLAN INDEX. Report: "Detected plan series with N sub-plans." Proceed to Series Mode (Step 2.5).
+**If file contains `<!-- PLAN-SERIES -->`**: Treat as master plan — extract sub-plan paths from PLAN INDEX and apply the same one-phase-per-session logic above.
 
-**If no marker**: Standard single plan — proceed normally, skip series-specific steps.
+**If file path ends with `plan.md` (task brief mode — default)**: Check for task brief files:
+1. Scan `.agents/features/{feature}/` for `task-{N}.md` files (any N)
+2. **If `task-{N}.md` files exist** → Task Brief Mode. Execute ONE brief per session:
+   a. Scan for `task-{N}.done.md` files to determine which briefs are complete
+   b. Identify the next undone brief (lowest N without a matching `.done.md`)
+   c. **If ALL briefs are done** → report "All {total} task briefs complete. Feature ready for `/code-loop {feature}`." Write handoff with **Status** `awaiting-review` and **Next Command** `/code-loop {feature}`. Rename `plan.md` → `plan.done.md`. **Stop — do not execute anything.**
+   d. **If a next brief exists** → report "Task brief mode: task {N}/{total}. Executing task-{N}.md in this session."
+      - Read the PRIOR TASK CONTEXT section from `task-{N}.md` (if task N > 1, it contains context from task N-1)
+      - Proceed to execute ONLY `task-{N}.md` as the plan (Step 1 onward, treating the brief as the plan). After execution completes, proceed to Step 2.6 for task completion.
+3. **If NO `task-{N}.md` files exist** → Legacy single plan mode. Proceed normally (the entire `plan.md` is the execution guide). Skip Steps 2.5 and 2.6.
+
+**If no marker and not plan.md**: Standard single plan — proceed normally, skip Steps 2.5 and 2.6.
 
 ### 1. Read and Understand
 
-- Read the ENTIRE plan carefully — all tasks, dependencies, validation commands, testing strategy
+- **In task brief mode**: Read the ENTIRE task brief (`task-{N}.md`) — all steps, validation commands, acceptance criteria. The task brief is self-contained; you do NOT need to re-read `plan.md` during execution.
+- **In legacy single plan or phase mode**: Read the ENTIRE plan carefully — all tasks, dependencies, validation commands, testing strategy.
 - Check `memory.md` for gotchas related to this feature area
 - **Derive feature name** from the plan path: extract the feature directory name from `.agents/features/{feature}/`.
     Example: `.agents/features/user-auth/plan.md` → `user-auth`. For plan series: `.agents/features/big-feature/plan-master.md` → `big-feature`.
@@ -118,18 +138,120 @@ When implementation deviates from the plan, classify immediately:
 
 **Track each divergence for the execution report** — don't rely on memory.
 
-### 2.5. Series Mode Execution (if plan series detected)
+### 2.4. Inline-from-Build Override
 
-For each sub-plan in PLAN INDEX order (or SUB-PLAN INDEX for master plans):
+When `/execute` is called inline from `/build` (not dispatched as a separate agent), the following behavioral overrides apply:
 
-1. Read sub-plan file
-2. Read shared context from master plan's SHARED CONTEXT REFERENCES section
-3. Execute tasks using Step 2 process (a → e)
-4. Run sub-plan's validation commands
-5. Read HANDOFF NOTES and include them as context for the next sub-plan
-6. Report: "Phase {N}/{total} complete."
+| Behavior | Standalone (default) | Inline from `/build` |
+|----------|---------------------|---------------------|
+| Execute one brief/phase | Yes | Yes (unchanged) |
+| Rename `.done.md` artifacts | Yes | Yes (unchanged) |
+| Count progress | Yes | Yes (unchanged) |
+| Write handoff file | Yes | **No** — `/build` owns the handoff |
+| "End session" directive | Yes | **No** — return control to `/build` |
+| Report completion message | Yes | **Abbreviated** — just "Task {N}/{total} complete." |
 
-**If a sub-plan fails**: Stop, report which sub-plan/task failed. Don't continue — failed state propagates.
+**How to detect**: The calling context (from `/build` Step 5) will explicitly state "This is an inline `/execute` call from `/build`." There is no flag — the context instruction is sufficient.
+
+**What still happens**: The `.done.md` rename (Step 6.6 completion sweep) and progress counting ALWAYS run regardless of mode. These are required for `/build`'s loop detection (checking `plan.done.md` to know when all briefs are complete).
+
+**What is suppressed**: Only the handoff write and session-ending directive in Steps 2.5/2.6 are suppressed. Everything else (implementation, validation, self-review, report) runs normally.
+
+### 2.5. Phase Completion (for master plan / plan series phases)
+
+After executing a single phase sub-plan (routed here from Step 0.5), complete the phase:
+
+1. Let the existing completion sweep (Step 6.6) handle renaming `plan-phase-{N}.md` → `plan-phase-{N}.done.md`
+2. Determine phase progress: count `.done.md` phase files vs total phases from the master plan's SUB-PLAN INDEX
+3. **If more phases remain:**
+
+   **Standalone mode (default):** Write handoff:
+   ```markdown
+   # Pipeline Handoff
+   <!-- Auto-updated by pipeline commands. Read by /prime. Do not edit manually. -->
+
+   - **Last Command**: /execute (phase {N} of {total})
+   - **Feature**: {feature}
+   - **Next Command**: /execute .agents/features/{feature}/plan-master.md
+   - **Master Plan**: .agents/features/{feature}/plan-master.md
+   - **Phase Progress**: {N}/{total} complete
+   - **Timestamp**: {ISO 8601 timestamp}
+   - **Status**: executing-series
+   ```
+   Report: "Phase {N}/{total} complete. Next session: `/prime` → `/execute .agents/features/{feature}/plan-master.md` to continue with phase {N+1}."
+   **End session.** Do NOT continue to the next phase — each phase gets a fresh context window.
+
+   **Inline from `/build`:** Skip handoff write. Report: "Phase {N}/{total} complete." Return control to `/build`.
+
+4. **If ALL phases done** — rename `plan-master.md` → `plan-master.done.md`.
+
+   **Standalone mode (default):** Write handoff:
+   ```markdown
+   # Pipeline Handoff
+   <!-- Auto-updated by pipeline commands. Read by /prime. Do not edit manually. -->
+
+   - **Last Command**: /execute (phase {total} of {total})
+   - **Feature**: {feature}
+   - **Next Command**: /code-loop {feature}
+   - **Master Plan**: .agents/features/{feature}/plan-master.done.md
+   - **Phase Progress**: {total}/{total} complete
+   - **Timestamp**: {ISO 8601 timestamp}
+   - **Status**: awaiting-review
+   ```
+   Report: "All {total} phases complete. Feature ready for review. Next session: `/prime` → `/code-loop {feature}`."
+
+   **Inline from `/build`:** Skip handoff write. Report: "All {total} phases complete." Return control to `/build`. The `plan-master.done.md` rename signals completion to `/build`'s loop.
+
+5. **If phase execution failed** — do NOT rename the phase file (no `.done.md`). In standalone mode: write handoff with **Status**: `blocked` and **Next Command**: `[manual intervention — phase {N} failed]`. In inline-from-build mode: skip handoff write — `/build` handles the error via stuck detection. Report the failure and stop in both modes.
+
+**Key rule**: `/execute` with a master plan executes exactly one phase per invocation. In standalone mode, this means one phase per session (the next session picks up the next phase via `/prime` → handoff). In inline-from-build mode, `/build` re-invokes `/execute` for the next phase within the same session.
+
+### 2.6. Task Brief Completion (for task brief mode)
+
+After executing a single task brief (routed here from Step 0.5), complete the task:
+
+1. Let the existing completion sweep (Step 6.6) handle renaming `task-{N}.md` → `task-{N}.done.md`
+2. Determine task progress: count `.done.md` task files vs total tasks from `plan.md`'s TASK INDEX table
+3. **If more tasks remain:**
+
+   **Standalone mode (default):** Write handoff:
+   ```markdown
+   # Pipeline Handoff
+   <!-- Auto-updated by pipeline commands. Read by /prime. Do not edit manually. -->
+
+   - **Last Command**: /execute (task {N} of {total})
+   - **Feature**: {feature}
+   - **Next Command**: /execute .agents/features/{feature}/plan.md
+   - **Task Progress**: {N}/{total} complete
+   - **Timestamp**: {ISO 8601 timestamp}
+   - **Status**: executing-tasks
+   ```
+   Report: "Task {N}/{total} complete. Next session: `/prime` → `/execute .agents/features/{feature}/plan.md` to continue with task {N+1}."
+   **End session.** Do NOT continue to the next task brief — each brief gets a fresh context window.
+
+   **Inline from `/build`:** Skip handoff write. Report: "Task {N}/{total} complete." Return control to `/build`.
+
+4. **If ALL tasks done** — rename `plan.md` → `plan.done.md`.
+
+   **Standalone mode (default):** Write handoff:
+   ```markdown
+   # Pipeline Handoff
+   <!-- Auto-updated by pipeline commands. Read by /prime. Do not edit manually. -->
+
+   - **Last Command**: /execute (task {total} of {total})
+   - **Feature**: {feature}
+   - **Next Command**: /code-loop {feature}
+   - **Task Progress**: {total}/{total} complete
+   - **Timestamp**: {ISO 8601 timestamp}
+   - **Status**: awaiting-review
+   ```
+   Report: "All {total} task briefs complete. Feature ready for review. Next session: `/prime` → `/code-loop {feature}`."
+
+   **Inline from `/build`:** Skip handoff write. Report: "All {total} task briefs complete." Return control to `/build`. The `plan.done.md` rename signals completion to `/build`'s loop.
+
+5. **If task execution failed** — do NOT rename the task file (no `.done.md`). In standalone mode: write handoff with **Status**: `blocked` and **Next Command**: `[manual intervention — task {N} failed]`. In inline-from-build mode: skip handoff write — `/build` handles the error via stuck detection. Report the failure and stop in both modes.
+
+**Key rule**: `/execute` with task briefs executes exactly one brief per invocation. In standalone mode, this means one brief per session (the next session auto-detects the next undone brief via artifact scan). In inline-from-build mode, `/build` re-invokes `/execute` for the next brief within the same session.
 
 ### 3. Implement Testing Strategy
 
@@ -244,6 +366,13 @@ After successful execution, save the execution report using the template:
 - **Template**: `.opencode/templates/EXECUTION-REPORT-TEMPLATE.md`
 - **Path**: `.agents/features/{feature}/report.md`
 
+**Multi-task mode (task briefs):** If this is one of multiple task briefs:
+- **First task (task 1):** Create `report.md` with the full template header (Meta Information through Ready for Commit), then add a `## Task 1: {task title}` section with this task's details (completed tasks, divergences, validation results).
+- **Subsequent tasks (task 2+):** Read the existing `report.md`, append a new `## Task {N}: {task title}` section with this task's details. Update the Meta Information totals (cumulative files added/modified, cumulative lines changed). Do NOT overwrite previous task sections.
+- **Final task:** After appending the last task section, update the top-level Self-Review Summary and Ready for Commit sections with cumulative totals.
+
+**Single plan / single phase:** Write the full report as a single document (no per-task sections needed).
+
 **Required sections:**
 - Meta Information (plan file, files added/modified, lines changed)
 - Completed Tasks (count/total with status)
@@ -256,7 +385,8 @@ After successful execution, save the execution report using the template:
 
 Completion sweep (required):
 - Before finishing `/execute`, rename completed artifacts within `.agents/features/{feature}/`:
-  - `plan.md` → `plan.done.md` (plan fully executed)
+  - `task-{N}.md` → `task-{N}.done.md` (completed task brief)
+  - `plan.md` → `plan.done.md` (only when ALL task briefs done, OR legacy single plan fully executed)
   - `plan-phase-{N}.md` → `plan-phase-{N}.done.md` (for each completed phase)
   - `plan-master.md` → `plan-master.done.md` (only when ALL phases are done)
   - `review.md` → `review.done.md` (if a review exists and all findings were addressed)
@@ -264,13 +394,33 @@ Completion sweep (required):
   - `loop-report-{N}.md` → `loop-report-{N}.done.md` (code-loop reports)
 - Never leave a completed artifact without the `.done.md` suffix.
 
+### 6.7. Pipeline Handoff Write (required)
+
+After completion sweep, overwrite `.agents/context/next-command.md`.
+
+**If this was the final task brief or a legacy single plan (all done):**
+```markdown
+# Pipeline Handoff
+<!-- Auto-updated by pipeline commands. Read by /prime. Do not edit manually. -->
+
+- **Last Command**: /execute
+- **Feature**: {feature}
+- **Next Command**: /code-loop {feature}
+- **Timestamp**: {ISO 8601 timestamp}
+- **Status**: awaiting-review
+```
+
+**If more task briefs remain:** The task brief handoff (Step 2.6, item 3) already handled it with `executing-tasks` status. Do not overwrite it here.
+
+**If this was the last phase of a master plan:** Use the `awaiting-review` format above. If more phases remain, the series mode handoff (Step 2.5, item 7) already handled it.
+
 ## Output Report
 
-Save this report to: `.agents/features/{feature}/report.md`
+The execution report was saved in Step 6.6 to: `.agents/features/{feature}/report.md`
 
-Use the feature name derived in Step 1. Create the `.agents/features/{feature}/` directory if it doesn't exist.
+Also display the report inline for the user. The saved file is consumed by `/system-review` and `/commit`.
 
-**IMPORTANT**: Save the report to the file FIRST, then also display it inline for the user. The saved file is consumed by `/system-review`.
+**Do NOT re-write the report here** — Step 6.6 already handled it. This section is for inline display only.
 
 ---
 

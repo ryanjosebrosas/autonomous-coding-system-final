@@ -13,7 +13,7 @@ Fix issues identified in a code review report. Processes findings by severity an
 ```
 
 **Arguments:**
-- `review-file` (required): Path to code review report (e.g., `.agents/reviews/feature-review.md`)
+- `review-file` (required): Path to code review report (e.g., `.agents/features/{feature}/review.md`)
 - `scope` (optional): What to fix
   - `all` (default) — Fix all issues regardless of severity
   - `critical+major` — Fix only Critical and Major issues, skip Minor
@@ -71,6 +71,47 @@ Apply the scope parameter to filter findings:
 | `file-path` | Only findings in specified file(s) |
 
 Report: "Fixing {N} issues ({X} Critical, {Y} Major, {Z} Minor) in {M} files."
+
+---
+
+## Step 2b: Dispatch Fix Implementation to T1 (Optional)
+
+**If dispatch available**, delegate fix implementation to a T1 model for faster, cheaper execution. The primary model orchestrates and verifies — T1 writes the code.
+
+**When to dispatch:**
+- Fixes are clear, isolated, and verifiable (null checks, imports, naming, type annotations)
+- Scope is `critical+major` or `critical` only — bounded, reviewable changes
+- Each fix targets a specific file:line from the review
+
+**When to skip dispatch and implement directly (Step 3):**
+- Fixes require multi-file architectural refactoring
+- Fix logic is ambiguous or requires judgment calls
+- Previous T1 dispatch produced incorrect results for similar fixes
+
+**Simple fixes (null checks, imports, naming, type annotations):**
+```
+dispatch({
+  mode: "agent",
+  taskType: "simple-fix",
+  prompt: "Fix the following issues found in code review. Read each affected file first. Make minimal changes only — do not refactor surrounding code. Run validation after all fixes.\n\nIssues to fix:\n{list of Critical/Major findings from review file, each as: File:Line — Issue — Fix suggestion}",
+})
+```
+
+**Complex fixes (multi-concern, logic errors, error handling gaps):**
+```
+dispatch({
+  mode: "agent",
+  taskType: "complex-fix",
+  prompt: "Fix the following issues found in code review. Read all affected files first. Make minimal changes — fix the issue, don't refactor. Run validation after all fixes.\n\nIssues to fix:\n{list of Critical/Major findings from review file, each as: File:Line — Issue — Fix suggestion}",
+})
+```
+
+After dispatch completes:
+- Read the result and verify each fix was applied correctly
+- If a fix looks wrong or incomplete, implement it yourself (Step 3)
+- Proceed to Step 4 (validation) — do NOT skip validation for dispatched fixes
+
+**If dispatch unavailable:** Proceed directly to Step 3.
 
 ---
 
@@ -143,11 +184,26 @@ Validation:
 Next: Run /code-review to verify fixes, or /commit if confident
 ```
 
+### Pipeline Handoff Write (required)
+
+After fix completion, overwrite `.agents/context/next-command.md`:
+
+```markdown
+# Pipeline Handoff
+<!-- Auto-updated by pipeline commands. Read by /prime. Do not edit manually. -->
+
+- **Last Command**: /code-review-fix
+- **Feature**: {feature, derived from review file path}
+- **Next Command**: /code-review --feature {feature}
+- **Timestamp**: {ISO 8601 timestamp}
+- **Status**: awaiting-re-review
+```
+
 ---
 
 ## Output Report
 
-Save to: `.agents/reviews/{feature}-fix-report.md`
+Save to: `.agents/features/{feature}/fix-report.md`
 
 ### Meta Information
 

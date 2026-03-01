@@ -17,11 +17,11 @@
 > Import from the right files.
 >
 > **When to use this template vs. Master + Sub-Plan:**
-> - **This template** (single plan): Features with <10 tasks that fit in one 700-1000 line plan
-> - **Master + Sub-Plan**: Complex features with 10+ tasks or multiple distinct phases
+> - **This template** (single plan): Standard features — task briefs scale to any task count; there is no upper boundary
+> - **Master + Sub-Plan**: Features with multiple distinct phases and heavy cross-phase dependencies that make a single plan unwieldy. The trigger is architectural complexity, not task count.
 >   - Use `MASTER-PLAN-TEMPLATE.md` for the overview (~500 lines)
 >   - Use `SUB-PLAN-TEMPLATE.md` for each phase (700-1000 lines each)
->   - `/planning` auto-detects which approach to use based on task count
+>   - `/planning` auto-detects which approach to use based on complexity, not task count
 
 ---
 
