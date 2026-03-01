@@ -1,6 +1,6 @@
 # Execution Report Template
 
-> Save implementation reports to `.agents/reports/{feature}-report.md`
+> Save implementation reports to `.agents/features/{feature}/report.md`
 > 
 > This report is consumed by `/system-review` for divergence analysis.
 > Be specific and honest — this is for process improvement, not judgment.
@@ -18,6 +18,23 @@
 - **RAG used**: {yes — describe what was looked up / no — plan was self-contained}
 - **Archon tasks updated**: {yes — N tasks marked done / no — not connected}
 - **Dispatch used**: {yes — list tasks delegated and models used / no — all tasks self-executed}
+
+---
+
+## Self-Review Summary
+
+> Paste the SELF-REVIEW SUMMARY from Step 5d here.
+
+~~~
+SELF-REVIEW SUMMARY
+====================
+Tasks:      {completed}/{total} ({skipped} skipped, {diverged} diverged)
+Files:      {added} added, {modified} modified ({unplanned} unplanned)
+Acceptance: {met}/{total} implementation criteria met ({deferred} deferred to runtime)
+Validation: L1 {pass/fail} | L2 {pass/fail} | L3 {pass/fail} | L4 {pass/fail} | L5 {pass/fail}
+Gaps:       {list any gaps, or "None"}
+Verdict:    {COMPLETE | INCOMPLETE — see gaps above}
+~~~
 
 ---
 
@@ -172,9 +189,13 @@ For each task in the plan:
 
 ## Completion Sweep
 
-> Before finishing, rename same-feature artifacts with `.done.md` suffix:
+> Before finishing, rename completed artifacts within `.agents/features/{feature}/`:
 
-- `.agents/reviews/{feature}*.md` → `.agents/reviews/{feature}*.done.md`
-- `.agents/reports/loops/{feature}*.md` → `.agents/reports/loops/{feature}*.done.md`
+- `plan.md` → `plan.done.md` (plan fully executed)
+- `plan-phase-{N}.md` → `plan-phase-{N}.done.md` (per completed phase)
+- `plan-master.md` → `plan-master.done.md` (only when ALL phases done)
+- `review.md` → `review.done.md` (if findings addressed)
+- `review-{N}.md` → `review-{N}.done.md` (code-loop reviews)
+- `loop-report-{N}.md` → `loop-report-{N}.done.md` (code-loop reports)
 
 **Completed**: {yes/no — confirm all same-feature artifacts renamed}

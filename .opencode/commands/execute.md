@@ -145,13 +145,82 @@ Validation policy (non-skippable):
 - Do not treat single checks as sufficient proof of completion.
 - Use project-configured commands from `.opencode/config.md` or auto-detected by `/prime`.
 
-### 5. Final Verification
+### 5. Self-Review (Plan Cross-Check)
 
-- All tasks completed
-- All tests passing
-- All validations pass
-- Code follows project conventions
-- Slice remained focused (single outcome, no mixed-scope spillover)
+Before writing the report, re-read the plan file and systematically verify every commitment was met. This is not a rubber stamp — genuinely question whether each item was done.
+
+**5a. Task-by-task cross-check:**
+
+Re-read the plan's STEP-BY-STEP TASKS section. For each task, verify:
+- Was the ACTION performed on the correct TARGET file?
+- Does the implementation match what IMPLEMENT specified?
+- Was the VALIDATE command run and did it pass?
+- If anything diverged, was it tracked as a divergence in Step 2d?
+
+Record a status for each task:
+- **Done** — implemented as planned
+- **Done (diverged)** — implemented differently, divergence already tracked
+- **Skipped** — not implemented, with reason
+- **Partial** — partially implemented, with what's missing
+
+**5b. Acceptance criteria cross-check:**
+
+Re-read the plan's ACCEPTANCE CRITERIA section (both Implementation and Runtime). For each criterion:
+- Is there concrete evidence from this run that proves it's met?
+- If a criterion cannot be verified yet (e.g., runtime-only), mark as "deferred to runtime"
+- If a criterion was NOT met, flag it — do NOT mark it `[x]` in Step 6
+
+**5c. File inventory check:**
+
+Compare what was actually created/modified against the plan:
+- Were all "New Files to Create" actually created?
+- Were all files in "Expected Files Touched" actually touched?
+- Were any files changed that the plan did NOT mention? (flag as unplanned)
+
+**5d. Implementation summary:**
+
+Produce a concise summary using this exact format:
+
+~~~
+SELF-REVIEW SUMMARY
+====================
+Tasks:      {completed}/{total} ({skipped} skipped, {diverged} diverged)
+Files:      {added} added, {modified} modified ({unplanned} unplanned)
+Acceptance: {met}/{total} implementation criteria met ({deferred} deferred to runtime)
+Validation: L1 {pass/fail} | L2 {pass/fail} | L3 {pass/fail} | L4 {pass/fail} | L5 {pass/fail}
+Gaps:       {list any gaps, or "None"}
+Verdict:    {COMPLETE | INCOMPLETE — see gaps above}
+~~~
+
+**Example (filled out):**
+~~~
+SELF-REVIEW SUMMARY
+====================
+Tasks:      7/7 (0 skipped, 1 diverged)
+Files:      6 added, 0 modified (0 unplanned)
+Acceptance: 6/6 implementation criteria met (2 deferred to runtime)
+Validation: L1 PASS | L2 PASS | L3 PASS | L4 N/A | L5 PASS
+Gaps:       None
+Verdict:    COMPLETE
+~~~
+
+Display this summary inline to the user before writing the report.
+
+**If verdict is INCOMPLETE:**
+- List each gap with its source (task number, criterion, or file)
+- For each gap, decide: fix now (return to Step 2) or accept and document as skipped
+- Do NOT proceed to Step 6 until all gaps are resolved or explicitly accepted as skips
+- If returning to fix, re-run the self-review after the fix
+
+**If verdict is COMPLETE:**
+- Proceed to Step 6
+- The summary data feeds directly into the execution report sections:
+  - Task statuses → "Completed Tasks" section
+  - Divergences → "Divergences from Plan" section
+  - Skipped items → "Skipped Items" section
+  - File inventory → "Meta Information" section (files added/modified)
+
+**Series Mode note:** In Master + Sub-Plan execution, run this self-review after EACH phase sub-plan, not just at the end. Each phase gets its own summary. The final phase summary covers the whole feature.
 
 ### 6. Update Plan Checkboxes
 
