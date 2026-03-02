@@ -28,18 +28,18 @@ Every feature, fix, or change follows this loop. No exceptions.
 
 ```mermaid
 flowchart LR
-    A([Start]) --> B[/planning]
+    A[Start] --> B[planning]
     B --> C{User reviews plan}
-    C -- Approved --> D[/execute]
+    C -- Approved --> D[execute]
     C -- Rejected --> B
     D --> E{More tasks?}
     E -- Yes --> D
-    E -- No --> F[/code-loop]
+    E -- No --> F[code-loop]
     F --> G{Issues found?}
-    G -- Fix & retry --> F
-    G -- Clean --> H[/commit]
-    H --> I[/pr]
-    I --> J([Done])
+    G -- Fix and retry --> F
+    G -- Clean --> H[commit]
+    H --> I[pr]
+    I --> J[Done]
 ```
 
 **Hard rules:**
@@ -77,26 +77,26 @@ sequenceDiagram
     participant S as Session
     participant H as next-command.md
 
-    U->>S: /prime → /planning feature
+    U->>S: prime then planning feature
     S->>H: write: awaiting-execution
     S-->>U: END session
 
-    U->>S: /prime → /execute plan.md
-    S->>H: write: executing-tasks (1/N)
+    U->>S: prime then execute plan.md
+    S->>H: write: executing-tasks 1 of N
     S-->>U: END session
 
-    Note over U,S: repeat /execute for each task brief
+    Note over U,S: repeat execute for each task brief
 
-    U->>S: /prime → /execute plan.md
+    U->>S: prime then execute plan.md
     S->>H: write: awaiting-review
     S-->>U: END session
 
-    U->>S: /prime → /code-loop feature
+    U->>S: prime then code-loop feature
     S->>H: write: ready-to-commit
     S-->>U: END session
 
-    U->>S: /prime → /commit → /pr
-    S->>H: write: ready-for-pr → pr-open
+    U->>S: prime then commit then pr
+    S->>H: write: pr-open
     S-->>U: END session
 ```
 
@@ -121,14 +121,14 @@ The system routes tasks to the cheapest capable model. Paid models are used only
 
 ```mermaid
 flowchart TD
-    O([Orchestrator\nClaude Opus]) -->|dispatch planning| T0
+    O[Orchestrator Claude Opus] -- dispatch planning --> T0
 
-    subgraph T0["T0 — Planning (cascade)"]
+    subgraph T0["T0 — Planning cascade"]
         direction LR
-        C1[GPT-5.3-Codex\nPAID] -->|fallback| C2[Qwen3-Max\nFREE] -->|fallback| C3[Qwen3.5-Plus\nFREE] -->|fallback| C4[Claude Opus\nPAID]
+        C1["GPT-5.3-Codex PAID"] -- fallback --> C2["Qwen3-Max FREE"] -- fallback --> C3["Qwen3.5-Plus FREE"] -- fallback --> C4["Claude Opus PAID"]
     end
 
-    T0 -->|plan approved| T1
+    T0 -- plan approved --> T1
 
     subgraph T1["T1 — Implementation FREE"]
         I1[Qwen3.5-Plus]
@@ -136,21 +136,21 @@ flowchart TD
         I3[Qwen3-Coder-Plus]
     end
 
-    T1 -->|code written| GAUNTLET
+    T1 -- code written --> GAUNTLET
 
     subgraph GAUNTLET["Free Review Gauntlet"]
         direction LR
-        T2[T2 GLM-5\nthinking FREE] --> T3[T3 DeepSeek-V3.2\nFREE]
+        T2["T2 GLM-5 thinking FREE"] --> T3["T3 DeepSeek-V3.2 FREE"]
     end
 
-    GAUNTLET -->|0-1 models flag issues| COMMIT([Commit directly\n$0 paid])
-    GAUNTLET -->|2 models flag issues| T4[T4 GPT Codex\ngate PAID cheap]
-    GAUNTLET -->|3+ models flag issues| FIX([T1 fixes\nre-run gauntlet])
-    T4 -->|issues found| FIX
-    T4 -->|clean| COMMIT
+    GAUNTLET -- 0-1 models flag issues --> COMMIT["Commit directly — zero paid cost"]
+    GAUNTLET -- 2 models flag issues --> T4["T4 GPT Codex gate — PAID cheap"]
+    GAUNTLET -- 3+ models flag issues --> FIX["T1 fixes — re-run gauntlet"]
+    T4 -- issues found --> FIX
+    T4 -- clean --> COMMIT
     FIX --> GAUNTLET
 
-    COMMIT -->|last resort only| T5[T5 Claude Sonnet\nPAID expensive]
+    COMMIT -- last resort only --> T5["T5 Claude Sonnet — PAID expensive"]
 ```
 
 ---
@@ -265,31 +265,31 @@ Step 10: Loop to next spec (zero interaction between specs)
 
 ```mermaid
 flowchart TD
-    START([/build next]) --> S1
+    START[build next] --> S1
 
-    S1[Step 1\nPick spec from BUILD_ORDER] --> S2
-    S2[Step 2\nPlan — T0 dispatch\n700-1000 lines + task briefs] --> S3
-    S3[Step 3\nPlan Review\nbatch-dispatch free models] --> S3R{Result?}
+    S1["Step 1 — Pick spec from BUILD_ORDER"] --> S2
+    S2["Step 2 — Plan via T0 dispatch, 700-1000 lines + task briefs"] --> S3
+    S3["Step 3 — Plan Review, batch-dispatch free models"] --> S3R{Result?}
     S3R -- APPROVE --> S4
     S3R -- IMPROVE --> S2
-    S3R -- REJECT x2 --> BLOCKED([STOP blocked])
-    S4[Step 4\nCommit Plan\ngit save point] --> S5
-    S5[Step 5\nExecute briefs\nT1 free — one per session] --> S5C{All briefs done?}
+    S3R -- REJECT twice --> BLOCKED["STOP — blocked"]
+    S4["Step 4 — Commit Plan, git save point"] --> S5
+    S5["Step 5 — Execute briefs, T1 free, one per session"] --> S5C{All briefs done?}
     S5C -- No --> S5
     S5C -- Yes --> S6
-    S6[Step 6\nValidate\nlint → types → tests] --> S6R{Errors?}
+    S6["Step 6 — Validate: lint, types, tests"] --> S6R{Errors?}
     S6R -- Fixable --> S6FIX[Fix loop] --> S6
     S6R -- Unresolvable --> BLOCKED
     S6R -- Clean --> S7
-    S7[Step 7\n4x Code-Loop Gauntlet\n3 free + Codex commit + push + PR] --> S7R{Codex clean?}
+    S7["Step 7 — 4x Code-Loop Gauntlet, 3 free + Codex, commit + push + PR"] --> S7R{Codex clean?}
     S7R -- Issues remain --> BLOCKED
-    S7R -- Clean + committed --> S8
-    S8[Step 8\nUpdate state\nBUILD_ORDER + build-state.json] --> S9
+    S7R -- Clean and committed --> S8
+    S8["Step 8 — Update state: BUILD_ORDER + build-state.json"] --> S9
     S9{Gate spec?}
     S9 -- No --> S10
-    S9 -- Yes: ALL PASS --> S10
-    S9 -- Yes: ANY FAIL --> BLOCKED
-    S10[Step 10\nLoop to next spec] --> S1
+    S9 -- Yes ALL PASS --> S10
+    S9 -- Yes ANY FAIL --> BLOCKED
+    S10["Step 10 — Loop to next spec"] --> S1
 
     style BLOCKED fill:#c0392b,color:#fff
 ```
@@ -307,31 +307,31 @@ Loop 4 (GPT Codex)   → review + fix + commit + push (paid gate)
 
 ```mermaid
 flowchart LR
-    CODE([Code after\nvalidation]) --> L1
+    CODE[Code after validation] --> L1
 
-    subgraph L1["Loop 1 — Free Model (e.g. GLM-5)"]
+    subgraph L1["Loop 1 — Free Model e.g. GLM-5"]
         direction TB
         R1[Review] --> F1{Issues?}
         F1 -- Yes --> X1[Fix] --> R1
-        F1 -- No --> PASS1([Pass])
+        F1 -- No --> PASS1[Pass]
     end
 
     PASS1 --> L2
 
-    subgraph L2["Loop 2 — Free Model (e.g. DeepSeek-V3.2)"]
+    subgraph L2["Loop 2 — Free Model e.g. DeepSeek-V3.2"]
         direction TB
         R2[Review] --> F2{Issues?}
         F2 -- Yes --> X2[Fix] --> R2
-        F2 -- No --> PASS2([Pass])
+        F2 -- No --> PASS2[Pass]
     end
 
     PASS2 --> L3
 
-    subgraph L3["Loop 3 — Free Model (e.g. Qwen3.5-Plus)"]
+    subgraph L3["Loop 3 — Free Model e.g. Qwen3.5-Plus"]
         direction TB
         R3[Review] --> F3{Issues?}
         F3 -- Yes --> X3[Fix] --> R3
-        F3 -- No --> PASS3([Pass])
+        F3 -- No --> PASS3[Pass]
     end
 
     PASS3 --> L4
@@ -340,7 +340,7 @@ flowchart LR
         direction TB
         R4[Review] --> F4{Issues?}
         F4 -- Yes --> X4[Fix] --> R4
-        F4 -- Clean --> COMMIT([git commit\ngit push\ncreate PR])
+        F4 -- Clean --> COMMIT["git commit, git push, create PR"]
     end
 ```
 
@@ -470,28 +470,18 @@ State is tracked via file renaming, not database records:
 
 ```mermaid
 stateDiagram-v2
-    [*] --> plan_md : /planning writes
+    [*] --> plan_md : planning writes
 
-    plan_md --> task_N_md : /planning writes briefs
-    task_N_md --> task_N_done : /execute completes brief
+    plan_md --> task_N_md : planning writes briefs
+    task_N_md --> task_N_done : execute completes brief
     task_N_done --> plan_done : all briefs done
 
     plan_md --> plan_done : legacy single plan executed
 
-    plan_done --> report_md : /execute writes report
-    report_md --> review_md : /code-loop writes review
+    plan_done --> report_md : execute writes report
+    report_md --> review_md : code-loop writes review
     review_md --> review_done : all findings addressed
-    review_done --> report_done : /commit completes
-
-    note right of task_N_md
-        Crash here = retry next session
-        (file not renamed = not done)
-    end note
-
-    note right of plan_done
-        Signals /build loop:
-        all briefs complete
-    end note
+    review_done --> report_done : commit completes
 ```
 
 ---
