@@ -555,13 +555,32 @@ Loop 1 (free)  → review + fix → Loop 2 (free)  → review + fix →
 Loop 3 (free)  → review + fix → Loop 4 (Codex) → review + fix + commit + push
 ```
 
-#### Model Lineup
+#### Model Lineup Selection
+
+1. **Read `.agents/specs/model-scores.json`** — check if `codeLoopLineup` array exists and has >= 3 entries
+2. **If lineup exists**: Use the top 3 models from `codeLoopLineup` as Loops 1-3, then Codex as Loop 4 (gate)
+3. **If lineup missing or incomplete** (file absent, array missing, or fewer than 3 entries): Fall back to default lineup:
+   - Loop 1: `zai-coding-plan/glm-5` (T2a thinking)
+   - Loop 2: `ollama-cloud/deepseek-v3.2` (T3 independent)
+   - Loop 3: `bailian-coding-plan-test/qwen3.5-plus` (T1c complex)
+   - Loop 4: `openai/gpt-5.3-codex` (T4 gate — always Codex)
+
+**Loop 4 is always Codex** — it serves as the paid quality gate regardless of benchmark results.
+
+When using scorecard models, log which models were selected:
+```
+Model lineup (from scorecard):
+  Loop 1: {provider}/{model} (score: {compositeScore})
+  Loop 2: {provider}/{model} (score: {compositeScore})
+  Loop 3: {provider}/{model} (score: {compositeScore})
+  Loop 4: openai/gpt-5.3-codex (T4 gate — fixed)
+```
 
 | Loop | Provider/Model | Tier | Flags | Purpose |
 |------|---------------|------|-------|---------|
-| 1 | `zai-coding-plan/glm-5` | T2a | `--auto` | Thinking review — catches logic errors |
-| 2 | `ollama-cloud/deepseek-v3.2` | T3 | `--auto` | Independent review — different perspective |
-| 3 | `bailian-coding-plan-test/qwen3.5-plus` | T1c | `--auto` | Code-focused review — catches implementation issues |
+| 1 | `lineup[0]` or `zai-coding-plan/glm-5` | T2a+ | `--auto` | Thinking review — catches logic errors |
+| 2 | `lineup[1]` or `ollama-cloud/deepseek-v3.2` | T3 | `--auto` | Independent review — different perspective |
+| 3 | `lineup[2]` or `bailian-coding-plan-test/qwen3.5-plus` | T1c | `--auto` | Code-focused review — catches implementation issues |
 | 4 | `openai/gpt-5.3-codex` | T4 | `--auto --auto-commit --build` | Final gate — commits + pushes if clean |
 
 #### Run Each Code-Loop
@@ -594,11 +613,13 @@ POST http://127.0.0.1:4096/session/{sessionId}/command
 ```
 
 **Loops 1-3 (free, review + fix only):**
+- Model: `lineup[N-1].provider/lineup[N-1].model` (from scorecard) or fallback default (see lineup table above)
 - Flags: `--auto` (no `--auto-commit`, no `--build`)
 - These loops review, fix issues, run validation — but do NOT commit
 - Each loop exits clean or with fixes applied. The next loop reviews the updated code.
 
 **Loop 4 (Codex, final gate + commit):**
+- Model: `openai/gpt-5.3-codex` — always Codex regardless of scorecard
 - Flags: `--auto --auto-commit --build`
 - `--auto-commit`: Commits when review is clean
 - `--build`: Tells `/commit` to write `build-loop-continuing` handoff + runs `git push`

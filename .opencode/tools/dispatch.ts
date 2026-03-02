@@ -21,6 +21,33 @@ const ARCHIVE_AFTER_DAYS = 3
 const ARCHIVE_AFTER_MS = ARCHIVE_AFTER_DAYS * 24 * 60 * 60 * 1000
 const MAX_ARCHIVE_PER_RUN = 10
 
+// Protected path prefixes — files here must NOT be modified by dispatched models.
+// If a dispatch changes files matching these patterns, it's "interference".
+const PROTECTED_PREFIXES = [
+  ".opencode/",
+  ".claude/",
+  ".agents/specs/",
+  "AGENTS.md",
+  "CLAUDE.md",
+]
+
+// Path to the model scores file (interference events appended here)
+const MODEL_SCORES_PATH = ".agents/specs/model-scores.json"
+
+// ============================================================================
+// INTERFERENCE TYPES
+// ============================================================================
+
+interface InterferenceEvent {
+  timestamp: string
+  provider: string
+  model: string
+  mode: string
+  sessionId: string
+  interferedFiles: string[]
+  reverted: boolean
+}
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -604,6 +631,210 @@ async function archiveOldDispatches(): Promise<void> {
 }
 
 // ============================================================================
+// INTERFERENCE TRACKING
+// ============================================================================
+
+// Capture current file state via git status --porcelain.
+// Returns a Set of file paths that have any status (modified, untracked, etc.)
+async function captureFileSnapshot(): Promise<Set<string>> {
+  try {
+    const proc = Bun.spawn(["git", "status", "--porcelain"], {
+      stdout: "pipe",
+      stderr: "pipe",
+    })
+    const output = await new Response(proc.stdout).text()
+    await proc.exited
+    const files = new Set<string>()
+    for (const line of output.split("\n")) {
+      if (line.length < 4) continue
+      // git status --porcelain format: "XY filename" (first 3 chars are status + space)
+      const filePath = line.slice(3).trim()
+      if (filePath) files.add(filePath)
+    }
+    return files
+  } catch {
+    return new Set()
+  }
+}
+
+// Compare before/after snapshots. Returns files that appeared or changed AFTER dispatch
+// that were NOT in the before snapshot.
+function detectNewChanges(before: Set<string>, after: Set<string>): string[] {
+  const newChanges: string[] = []
+  for (const file of after) {
+    if (!before.has(file)) {
+      newChanges.push(file)
+    }
+  }
+  return newChanges
+}
+
+// Filter changed files to only those in protected paths
+function filterProtectedFiles(files: string[]): string[] {
+  return files.filter(file =>
+    PROTECTED_PREFIXES.some(prefix => file.startsWith(prefix) || file === prefix.replace(/\/$/, ""))
+  )
+}
+
+// Revert interfered files: checkout for modified, rm for untracked
+async function revertInterference(files: string[]): Promise<boolean> {
+  try {
+    for (const file of files) {
+      // Try git checkout first (works for modified tracked files)
+      const checkout = Bun.spawn(["git", "checkout", "HEAD", "--", file], {
+        stdout: "pipe",
+        stderr: "pipe",
+      })
+      const exitCode = await checkout.exited
+      if (exitCode !== 0) {
+        // File might be untracked (new) — delete it
+        try {
+          const { unlinkSync } = await import("node:fs")
+          unlinkSync(file)
+        } catch {
+          // File doesn't exist or can't be deleted — skip
+        }
+      }
+    }
+    return true
+  } catch {
+    return false
+  }
+}
+
+// Log interference event to model-scores.json
+async function logInterference(event: InterferenceEvent): Promise<void> {
+  try {
+    const { readFileSync, writeFileSync, existsSync, mkdirSync } = await import("node:fs")
+    const { dirname } = await import("node:path")
+
+    let scores: any = { models: {}, interferenceLog: [], codeLoopLineup: [] }
+    if (existsSync(MODEL_SCORES_PATH)) {
+      scores = JSON.parse(readFileSync(MODEL_SCORES_PATH, "utf-8"))
+    } else {
+      const dir = dirname(MODEL_SCORES_PATH)
+      if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
+    }
+
+    // Ensure interferenceLog array exists
+    if (!scores.interferenceLog) scores.interferenceLog = []
+    scores.interferenceLog.push(event)
+
+    // Update per-model interference count
+    const modelKey = `${event.provider}/${event.model}`
+    if (!scores.models) scores.models = {}
+    if (!scores.models[modelKey]) {
+      scores.models[modelKey] = {
+        provider: event.provider,
+        model: event.model,
+        interferenceCount: 0,
+        dispatchCount: 0,
+      }
+    }
+    scores.models[modelKey].interferenceCount++
+
+    writeFileSync(MODEL_SCORES_PATH, JSON.stringify(scores, null, 2))
+  } catch {
+    // Silent fail — interference logging is best-effort
+  }
+}
+
+// ============================================================================
+// CODE LOOP LINEUP AUTO-SELECTION
+// ============================================================================
+
+interface ModelScore {
+  provider: string
+  model: string
+  interferenceCount: number
+  dispatchCount: number
+  benchmark?: {
+    responseTimeMs: number
+    reviewQuality: number       // 0-10
+    formatCompliance: number    // 0-10
+    issuesFound: number
+    falsePositiveRate: number   // 0.0-1.0
+    timestamp: string
+  }
+}
+
+// Composite score: weighted sum of review quality, format compliance, response time,
+// interference rate, and reliability. Lower interference = better. Faster = better (tiebreaker).
+function computeCompositeScore(m: ModelScore): number {
+  if (!m.benchmark) return -1  // No benchmark = not eligible
+
+  const interferenceRate = m.dispatchCount > 0
+    ? m.interferenceCount / m.dispatchCount
+    : 0
+
+  // Disqualify models with >0 interference rate
+  if (interferenceRate > 0) return -1
+
+  // Weighted score (out of ~10):
+  //   reviewQuality:    40% (most important)
+  //   formatCompliance: 25% (need parseable output)
+  //   responseTime:     15% (prefer faster, normalize 0-10)
+  //   falsePositiveRate: 20% (prefer fewer false positives)
+  const timeScore = Math.max(0, 10 - (m.benchmark.responseTimeMs / 30_000) * 10)
+  const fpScore = 10 * (1 - m.benchmark.falsePositiveRate)
+
+  return parseFloat((
+    m.benchmark.reviewQuality * 0.4 +
+    m.benchmark.formatCompliance * 0.25 +
+    timeScore * 0.15 +
+    fpScore * 0.2
+  ).toFixed(2))
+}
+
+// Generate the top-3 free model lineup for /code-loop gauntlet
+function generateCodeLoopLineup(scores: Record<string, ModelScore>): Array<{
+  provider: string
+  model: string
+  label: string
+  compositeScore: number
+}> {
+  const candidates = Object.values(scores)
+    .filter(m => m.benchmark != null && computeCompositeScore(m) > 0)
+    .map(m => ({
+      provider: m.provider,
+      model: m.model,
+      label: `${m.provider}/${m.model}`,
+      compositeScore: computeCompositeScore(m),
+    }))
+    .sort((a, b) => b.compositeScore - a.compositeScore)
+
+  // Pick top 3, ensuring provider diversity (max 2 from same provider)
+  const lineup: typeof candidates = []
+  const providerCounts: Record<string, number> = {}
+
+  for (const candidate of candidates) {
+    if (lineup.length >= 3) break
+    const count = providerCounts[candidate.provider] || 0
+    if (count >= 2) continue  // Max 2 from same provider
+    lineup.push(candidate)
+    providerCounts[candidate.provider] = count + 1
+  }
+
+  return lineup
+}
+
+// Read model-scores.json, recompute codeLoopLineup, and write back
+async function refreshCodeLoopLineup(): Promise<void> {
+  try {
+    const { readFileSync, writeFileSync, existsSync } = await import("node:fs")
+    if (!existsSync(MODEL_SCORES_PATH)) return
+
+    const scores = JSON.parse(readFileSync(MODEL_SCORES_PATH, "utf-8"))
+    if (!scores.models) return
+
+    scores.codeLoopLineup = generateCodeLoopLineup(scores.models)
+    writeFileSync(MODEL_SCORES_PATH, JSON.stringify(scores, null, 2))
+  } catch {
+    // Silent fail
+  }
+}
+
+// ============================================================================
 // TOOL EXPORT
 // ============================================================================
 
@@ -782,6 +1013,10 @@ export default tool({
     }
 
     // ── 5. Dispatch ──
+    // ── Interference tracking: pre-dispatch snapshot ──
+    const trackInterference = mode === "agent" || mode === "command"
+    const preSnapshot = trackInterference ? await captureFileSnapshot() : new Set<string>()
+
     const start = Date.now()
     let result: DispatchResult | null = null
 
@@ -902,11 +1137,86 @@ export default tool({
 
     const totalMs = Date.now() - start
 
+    // ── Interference tracking: post-dispatch detection ──
+    if (trackInterference && result) {
+      const postSnapshot = await captureFileSnapshot()
+      const newChanges = detectNewChanges(preSnapshot, postSnapshot)
+      const interferedFiles = filterProtectedFiles(newChanges)
+
+      if (interferedFiles.length > 0) {
+        const reverted = await revertInterference(interferedFiles)
+        await logInterference({
+          timestamp: new Date().toISOString(),
+          provider: result.provider,
+          model: result.model,
+          mode: result.mode,
+          sessionId: result.sessionId,
+          interferedFiles,
+          reverted,
+        })
+
+        // Refresh lineup — interference disqualifies this model
+        refreshCodeLoopLineup().catch(() => {})
+
+        // Append interference warning to result
+        result.text += `\n\n---\n\n⚠️ **INTERFERENCE DETECTED**\n\n` +
+          `This model modified ${interferedFiles.length} protected file(s):\n` +
+          interferedFiles.map(f => `- \`${f}\``).join("\n") + "\n\n" +
+          (reverted ? "All changes were automatically reverted." : "⚠️ Auto-revert failed — manual cleanup required.")
+      }
+
+      // Track dispatch count for the model (even if no interference)
+      try {
+        const { readFileSync, writeFileSync, existsSync } = await import("node:fs")
+        let scores: any = { models: {} }
+        if (existsSync(MODEL_SCORES_PATH)) {
+          scores = JSON.parse(readFileSync(MODEL_SCORES_PATH, "utf-8"))
+        }
+        const modelKey = `${result.provider}/${result.model}`
+        if (!scores.models) scores.models = {}
+        if (!scores.models[modelKey]) {
+          scores.models[modelKey] = {
+            provider: result.provider,
+            model: result.model,
+            interferenceCount: 0,
+            dispatchCount: 0,
+          }
+        }
+        scores.models[modelKey].dispatchCount++
+        writeFileSync(MODEL_SCORES_PATH, JSON.stringify(scores, null, 2))
+      } catch {
+        // Silent fail
+      }
+    }
+
     // ── 6. Background cleanup ──
     archiveOldDispatches().catch(() => {})
 
     // ── 7. Format output ──
     if (!result) {
+      // Even on failure, check for partial interference
+      if (trackInterference) {
+        const postSnapshot = await captureFileSnapshot()
+        const newChanges = detectNewChanges(preSnapshot, postSnapshot)
+        const interferedFiles = filterProtectedFiles(newChanges)
+        if (interferedFiles.length > 0) {
+          await revertInterference(interferedFiles)
+          // Log with best-effort model info from resolved route
+          const route = resolved.route as ModelRoute
+          await logInterference({
+            timestamp: new Date().toISOString(),
+            provider: route?.provider || "unknown",
+            model: route?.model || "unknown",
+            mode,
+            sessionId,
+            interferedFiles,
+            reverted: true,
+          })
+          // Refresh lineup — interference disqualifies this model
+          refreshCodeLoopLineup().catch(() => {})
+        }
+      }
+
       return (
         `# Dispatch Failed\n\n` +
         `**Route**: ${resolved.source}\n` +
