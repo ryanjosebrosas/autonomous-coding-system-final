@@ -1,5 +1,6 @@
 ---
 description: Process to fix bugs found in manual/AI code review
+model: claude-sonnet-4-6
 ---
 
 # Code Review Fix: Fix Issues from Review
@@ -71,47 +72,6 @@ Apply the scope parameter to filter findings:
 | `file-path` | Only findings in specified file(s) |
 
 Report: "Fixing {N} issues ({X} Critical, {Y} Major, {Z} Minor) in {M} files."
-
----
-
-## Step 2b: Dispatch Fix Implementation to T1 (Optional)
-
-**If dispatch available**, delegate fix implementation to a T1 model for faster, cheaper execution. The primary model orchestrates and verifies — T1 writes the code.
-
-**When to dispatch:**
-- Fixes are clear, isolated, and verifiable (null checks, imports, naming, type annotations)
-- Scope is `critical+major` or `critical` only — bounded, reviewable changes
-- Each fix targets a specific file:line from the review
-
-**When to skip dispatch and implement directly (Step 3):**
-- Fixes require multi-file architectural refactoring
-- Fix logic is ambiguous or requires judgment calls
-- Previous T1 dispatch produced incorrect results for similar fixes
-
-**Simple fixes (null checks, imports, naming, type annotations):**
-```
-dispatch({
-  mode: "agent",
-  taskType: "simple-fix",
-  prompt: "Fix the following issues found in code review. Read each affected file first. Make minimal changes only — do not refactor surrounding code. Run validation after all fixes.\n\nIssues to fix:\n{list of Critical/Major findings from review file, each as: File:Line — Issue — Fix suggestion}",
-})
-```
-
-**Complex fixes (multi-concern, logic errors, error handling gaps):**
-```
-dispatch({
-  mode: "agent",
-  taskType: "complex-fix",
-  prompt: "Fix the following issues found in code review. Read all affected files first. Make minimal changes — fix the issue, don't refactor. Run validation after all fixes.\n\nIssues to fix:\n{list of Critical/Major findings from review file, each as: File:Line — Issue — Fix suggestion}",
-})
-```
-
-After dispatch completes:
-- Read the result and verify each fix was applied correctly
-- If a fix looks wrong or incomplete, implement it yourself (Step 3)
-- Proceed to Step 4 (validation) — do NOT skip validation for dispatched fixes
-
-**If dispatch unavailable:** Proceed directly to Step 3.
 
 ---
 

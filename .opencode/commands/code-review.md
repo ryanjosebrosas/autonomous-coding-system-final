@@ -1,5 +1,6 @@
 ---
 description: Technical code review for quality and bugs that runs pre-commit
+model: claude-sonnet-4-6
 ---
 
 # Code Review: Find Bugs, Security Issues, and Quality Problems
@@ -77,8 +78,8 @@ Before reviewing, gather supporting context:
 Read these files to understand project standards and patterns:
 1. **AGENTS.md** or **CLAUDE.md** — project methodology and conventions
 2. **README.md** — project purpose and capabilities
-3. **`.opencode/sections/`** — auto-loaded rules and patterns
-4. **`.opencode/config.md`** — validation commands and stack info
+3. **`.claude/sections/`** — auto-loaded rules and patterns
+4. **`.claude/config.md`** — validation commands and stack info
 
 ### Affected Files (Required)
 
@@ -127,63 +128,15 @@ Check for issues at three severity levels:
 
 ---
 
-## Step 4: Dispatch for Second Opinions (Optional)
+## Step 4: Deep Review Pass (Optional)
 
-For security-sensitive or architecturally complex changes, get a second opinion.
+For security-sensitive or architecturally complex changes, review from multiple angles:
 
-**When to dispatch:**
-- Changes touch auth, crypto, payments, or data handling (security-sensitive)
-- Changes span multiple interconnected files (architecture risk)
-- First pass found 0 issues (sanity check — did we miss something?)
-- Review confidence is low
+- **Security angle** — auth, crypto, data handling, input validation
+- **Performance angle** — N+1 queries, memory leaks, O(n²) patterns
+- **Architecture angle** — layer boundaries, coupling, contract violations
 
-**When to skip dispatch:**
-- Trivial changes (typos, formatting, docs-only)
-- Previous dispatch round added no new findings
-
-**If dispatch available:**
-
-```
-REVIEW_PROMPT = "Review the following code changes for Critical and Major issues only.\n\n{git diff or file content}\n\nRespond with:\n- ISSUES FOUND: [list each issue as: Severity | File:Line | Description]\n- NO ISSUES: code is clean."
-```
-
-**Security-sensitive changes:**
-```
-dispatch({
-  taskType: "security-review",
-  prompt: REVIEW_PROMPT,
-})
-```
-
-**Architecture-heavy changes:**
-```
-dispatch({
-  taskType: "architecture-audit",
-  prompt: REVIEW_PROMPT,
-})
-```
-
-**General second opinion (default):**
-```
-dispatch({
-  taskType: "code-review",
-  prompt: REVIEW_PROMPT,
-})
-```
-
-**Multiple concerns — run gauntlet:**
-```
-batch-dispatch({
-  batchPattern: "free-impl-validation",
-  prompt: REVIEW_PROMPT,
-})
-```
-Read `escalationAction` from the `## Consensus Analysis` table in the output:
-- `skip-t4` → 0-1 models found issues → proceed to Step 5
-- `run-t4` → 2 models found issues → one more dispatch tiebreaker, then Step 5
-- `fix-and-rerun` → 3+ models found issues → surface findings in Step 5
-
-**If dispatch unavailable:** Proceed with your own thorough review. Consider reviewing from multiple angles (security, performance, architecture) sequentially.
+This is a second independent pass with a fresh perspective, not a repeat of Step 3.
 
 ---
 
@@ -220,8 +173,8 @@ Minor (consider):
 RAG-Informed:
 - {findings backed by documentation, or "No RAG sources applicable"}
 
-Second Opinions:
-- {findings from dispatch, or "No dispatch used"}
+Deep Review Pass:
+- {additional findings from second angle review, or "No additional findings"}
 
 Summary: {X} critical, {Y} major, {Z} minor
 Recommendation: {PASS / FIX CRITICAL / FIX MAJOR}

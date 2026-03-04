@@ -22,7 +22,7 @@ Start by gathering codebase context to understand standards and patterns.
 ### 1. Read Project Context
 
 - `memory.md` — gotchas, decisions, patterns
-- `.opencode/config.md` — validation commands, stack info
+- `.claude/config.md` — validation commands, stack info
 - Key files in the main source directory
 - Documented standards in docs/ or similar
 
@@ -133,18 +133,6 @@ Low:      {N}
 
 Verdict: PASS / FAIL (fix critical/high first)
 ```
-
-## Dispatch Integration (Optional)
-
-If dispatch is available, consider sending the diff to additional reviewers for a second opinion:
-
-| Concern | Tier | When |
-|---------|------|------|
-| Security-sensitive changes | T3/T4 | Always for auth, crypto, data handling |
-| Architecture changes | T2/T3 | When touching >5 files or new patterns |
-| Complex logic | T2 | When cyclomatic complexity is high |
-
-Merge dispatch findings with primary review, deduplicate, and include source attribution.
 
 ## Important
 

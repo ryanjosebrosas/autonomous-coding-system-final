@@ -36,9 +36,9 @@ Perform a meta-level analysis of how well the implementation followed the plan a
 
 You will analyze four key artifacts:
 
-1. **Planning command**: Read `.opencode/commands/planning.md` to understand the planning process
+1. **Planning command**: Read `.claude/commands/planning.md` to understand the planning process
 2. **Generated plan**: Read `$1` to understand what the agent was SUPPOSED to do
-3. **Execute command**: Read `.opencode/commands/execute.md` to understand the execution process
+3. **Execute command**: Read `.claude/commands/execute.md` to understand the execution process
 4. **Execution report**: Read `$2` to understand what the agent ACTUALLY did and why
 
 ## Analysis Workflow
@@ -152,15 +152,15 @@ Based on analysis, recommend specific actions:
 - [ ] Add gotcha for {Y}
 - [ ] Record decision about {Z}
 
-**Update Plan Command (.opencode/commands/planning.md):**
+**Update Plan Command (.claude/commands/planning.md):**
 - [ ] Add instruction for {missing step}
 - [ ] Clarify {ambiguous instruction}
 - [ ] Add validation requirement for {X}
 
-**Update Execute Command (.opencode/commands/execute.md):**
+**Update Execute Command (.claude/commands/execute.md):**
 - [ ] Add {validation step} to execution checklist
 
-**Update Config (.opencode/config.md):**
+**Update Config (.claude/config.md):**
 - [ ] Update {validation command}
 - [ ] Add {missing path}
 

@@ -1,5 +1,6 @@
 ---
 description: Interactive discovery session — explore ideas WITH the user, then produce a structured plan
+model: claude-opus-4-6
 ---
 
 # Planning: Interactive Discovery + Structured Plan
@@ -8,20 +9,15 @@ Work WITH the user to explore, question, and discover the right approach for a s
 
 ## Feature: $ARGUMENTS
 
-**Flags** (parsed from `$ARGUMENTS`):
-- `--auto-approve` (optional): **Full autonomous mode.** Skip ALL interactive questions in Phases 1-3, skip all checkpoints, and auto-approve in Phase 4 via self-review checklist. The model reads context, runs research, makes decisions, and writes the plan without any user interaction. Used by `/build` when dispatching to `/planning` for autonomous operation.
-
-When flags are present in `$ARGUMENTS`, strip them before parsing the remaining value as the feature name or spec ID.
-
 ---
 
 ## Pipeline Position
 
 ```
-/mvp → /prd → /pillars → /decompose → /planning (this) → /build → /ship
+/mvp → /prd → /planning (this) → codex /execute → /code-review → /commit → /pr
 ```
 
-Used per-spec inside the `/build` loop, or standalone for manual planning.
+Used standalone for each feature or capability.
 
 ---
 
@@ -30,150 +26,86 @@ Used per-spec inside the `/build` loop, or standalone for manual planning.
 1. **Discovery first, plan second.** Do NOT auto-generate a plan. Ask questions, discuss approaches, explore the codebase together.
 2. **Work WITH the user.** This is a conversation. Ask short questions, confirm insights, discuss tradeoffs.
 3. **No code in this phase.** Planning produces a plan document, not code.
-4. **Plan-before-execute.** `/execute` only runs from a `/planning`-generated artifact in `.agents/features/{feature}/`.
+4. **Plan-before-execute.** `codex /execute` only runs from a `/planning`-generated artifact in `.agents/features/{feature}/`.
 
 ---
 
 ## Phase 1: Understand (Discovery Conversation)
 
-Start by understanding what the user wants to build. This is interactive — **UNLESS `--auto-approve` is set**, in which case skip ALL interactive questions in Phases 1-3 and proceed directly through each phase without waiting for user input. The spec context is fully specified in the arguments; there is nothing to discover interactively.
+Start by understanding what the user wants to build. This is interactive — a conversation, not automation.
 
-### If `--auto-approve` is set:
-- Read the spec from `.agents/specs/BUILD_ORDER.md` (or use inline spec context from arguments)
-- Read `.agents/specs/build-state.json` for context from prior specs
-- Read pillar context, PRD, and codebase files (same as below)
-- **Do NOT ask questions. Do NOT wait for user input. Summarize briefly, then proceed directly to Phase 2.**
-- Log: "Auto-approve mode — skipping interactive discovery. Spec context provided."
+### Starting the conversation:
+- Ask: "What are we building? Give me the short version."
+- Listen, then ask 2-3 targeted follow-up questions:
+  - "What's the most important thing this needs to do?"
+  - "What existing code should this integrate with?"
+  - "Any constraints or preferences on how to build it?"
 
-### If called from `/build` with a spec (no `--auto-approve`):
-- Read the spec from `.agents/specs/BUILD_ORDER.md`
-- Read `.agents/specs/build-state.json` for context from prior specs
-- Summarize: "This spec is about {purpose}. It depends on {deps} which are done. Here's what I think we need to build..."
-- Ask: "Does this match your thinking? Anything to add or change?"
+If `$ARGUMENTS` is provided:
+- Summarize what you understand from the feature name/description
+- Ask: "This is about {purpose}. Does this match your thinking? Anything to add or change?"
 
-### Pillar context loading (automatic):
-When planning any spec with a pillar ID (e.g., P0-03, P1-02):
-1. Extract pillar number from spec ID
-2. Look for `.agents/specs/pillar-{N}-*.md` matching that pillar
-3. If found, read the pillar file — it contains:
-   - Pillar scope and context from PILLARS.md
-   - Research findings (RAG references, council feedback)
-   - PRD coverage analysis
-   - The full spec list for that pillar with dependencies
-4. Use this as the PRIMARY context for planning (more specific than BUILD_ORDER.md)
-5. If no pillar file found, fall back to reading BUILD_ORDER.md directly
-
-### If called standalone:
-- If `$ARGUMENTS` matches a pillar spec ID (e.g., `P0-01`, `P1-03`):
-  1. Read the matching pillar file from `.agents/specs/pillar-{N}-*.md`
-  2. Read the specific spec entry from that file
-  3. Summarize: "This spec is about {purpose}. Pillar context: {scope}. Research found: {key findings}."
-  4. Ask: "Does this match your thinking? Anything to add or change?"
-- Otherwise:
-  - Ask: "What are we building? Give me the short version."
-  - Listen, then ask 2-3 targeted follow-up questions:
-    - "What's the most important thing this needs to do?"
-    - "What existing code should this integrate with?"
-    - "Any constraints or preferences on how to build it?"
+Read these files for context (if they exist):
+- `mvp.md` — product vision
+- `PRD.md` (or similar) — product requirements
+- `memory.md` — past decisions and gotchas
 
 ### Discovery Tools
 Use these to explore the codebase during conversation:
 - **Glob/Grep/Read** — find and read relevant files
 - **Archon RAG** (if available) — search knowledge base for patterns and examples
-- **Dispatch** (if available) — send targeted research queries to free models
-- **Council** — for architectural decisions with multiple valid approaches (suggest to user)
+- **WebFetch** — look up official docs for libraries/APIs in scope
 
 ### Checkpoints
 After each major discovery, confirm:
 - "Here's what I'm seeing — does this match your intent?"
 - "I think we should approach it like X because Y. Sound right?"
 - Keep confirmations SHORT — one sentence, not paragraphs.
-- **If `--auto-approve`**: Skip ALL checkpoints in all phases. Log findings and proceed. Do not ask questions or wait for user input.
 
 ---
 
-## Phase 2: Explore (Sub-Agent Research)
+## Phase 2: Explore (Research)
 
-Once the direction is clear, offload research to sub-agents running in parallel. This keeps the main conversation context clean — only research summaries come back, not raw search results.
+Once the direction is clear, delegate all retrieval to Haiku subagents. Run in parallel where possible.
 
-### 2a. Pillar context (inline — read directly, small and pre-curated):
-If the spec has a pillar ID and a matching pillar file was found in Phase 1:
-- Read the Research Findings section — pre-researched RAG results and council feedback
-- Read the PRD Coverage table — which PRD requirements this spec covers
-- Read the Dependency Verification — cross-pillar dependencies
-- Use these as starting context — don't re-research what /decompose already found
+### 2a. Codebase research → delegate to `research-codebase` subagent (Haiku)
 
-### 2b. Launch parallel research agents:
+Use the Agent tool to invoke the `research-codebase` subagent with a prompt covering:
+- Feature being built and key integration points to find
+- Patterns to look for (naming conventions, error handling, testing)
+- Specific files or directories likely relevant
 
-Launch ALL three agents in a single message (parallel Task tool calls). Each runs in its own context and returns a summary.
+The subagent returns: file:line references, patterns found, gotchas, integration points.
 
-**Agent 1: research-codebase** (Task tool, subagent_type: "explore")
-```
-Prompt: "Thorough exploration for planning context.
+### 2b. Knowledge base (if Archon connected) → delegate to `archon-retrieval` subagent (Haiku)
 
-Feature: {feature description from Phase 1}
+Use the Agent tool to invoke the `archon-retrieval` subagent with:
+- 2-5 keyword queries for the feature's key concepts
+- Ask for both docs and code examples
 
-Find:
-1. Files with patterns we should follow for this feature
-2. Integration points — where new code connects to existing code
-3. Naming conventions, error handling patterns, testing patterns
-4. Gotchas from the codebase (inconsistencies, non-obvious behavior)
+The subagent returns: matched documentation excerpts and code examples with source references.
 
-Return: structured findings with exact file:line references."
-```
+### 2c. External docs (if needed) → delegate to `research-external` subagent (Haiku)
 
-**Agent 2: research-external** (Task tool, subagent_type: "explore")
-```
-Prompt: "Research external documentation and best practices.
+Use the Agent tool to invoke the `research-external` subagent with:
+- Libraries/APIs involved and what specifically to look up
+- Any known version constraints
 
-Feature: {feature description}
-Technologies: {languages, frameworks, libraries involved}
+The subagent returns: relevant docs, best practices, pitfalls.
 
-Find:
-1. Official documentation for relevant APIs
-2. Best practices and recommended patterns
-3. Version compatibility notes
-4. Common pitfalls in the documentation
+### 2d. Past plans → delegate to `planning-research` subagent (Haiku)
 
-Use Archon RAG first (rag_search_knowledge_base, rag_search_code_examples with 2-5 keyword queries).
-If RAG unavailable, use WebFetch for official docs.
+Use the Agent tool to invoke the `planning-research` subagent with:
+- Feature name and short description
+- Ask it to scan `.agents/features/*/plan.done.md` for similar features and reusable patterns
 
-Return: findings with source URLs/citations."
-```
+The subagent returns: prior decisions, reusable patterns, lessons learned.
 
-**Agent 3: planning-research** (Task tool, subagent_type: "explore")
-```
-Prompt: "Search for planning context from knowledge base and completed plans.
+### 2e. Synthesise findings:
 
-Feature: {feature description}
-
-Find:
-1. Archon RAG: architecture patterns and code examples (2-5 keyword queries)
-2. Completed plans: scan .agents/features/*/plan.done.md for similar features
-3. Lessons and patterns from past implementations
-
-Return: structured findings with sources."
-```
-
-### 2c. Collect and share findings:
-
-When all three agents return:
-1. Read each agent's summary
-2. Share key findings with the user: "Research found these patterns..." / "Past plan for {X} used this approach..."
-3. Merge findings into the working context for Phase 3
-
-**Fallback**: If Task tool is unavailable, do research inline using Glob/Grep/Read for codebase, Archon RAG for knowledge base, and WebFetch for external docs. The agent prompts above serve as a checklist for what to cover.
-
-### 2d. Dispatch for deep research (optional, when agents aren't enough):
-
-| Need | Tier | Approach |
-|------|------|----------|
-| Quick factual check | T1 | Dispatch quick-check |
-| API/pattern question | T1 | Dispatch api-analysis |
-| Library comparison | T2 | Dispatch research |
-| Documentation lookup | T1 | Dispatch docs-lookup |
-
-If dispatch unavailable, use Archon RAG or web search.
+Take all subagent outputs and summarise:
+- "Research found these patterns..." / "Past plan for {X} used this approach..."
+- Share key file:line references, patterns, and gotchas before moving to Phase 3
 
 ---
 
@@ -219,7 +151,6 @@ Unknowns (explicit gaps):
 ```
 
 **Checkpoint**: Share the synthesis with the user. "Here's what I'm working with — anything missing or wrong?"
-**If `--auto-approve`**: Skip the checkpoint question. Log the synthesis and proceed directly to 3b.
 
 ### 3b. Analyze
 
@@ -265,11 +196,9 @@ Interface Boundaries:
 ```
 
 **Checkpoint**: If risks are HIGH, flag them: "I see a significant risk with {X}. Want to discuss mitigation before I proceed?"
-**If `--auto-approve`**: Skip the checkpoint. Log the analysis and proceed directly to 3c. For HIGH risks, log them but continue — autonomous mode accepts documented risks.
 
-For non-trivial architecture decisions where multiple approaches are viable, suggest council:
-- "This has {N} valid approaches with real tradeoffs. Want to run `/council` to get multi-model input before I decide?"
-- **If `--auto-approve`**: Skip council suggestion. Pick the approach that best matches established project patterns.
+For non-trivial architecture decisions where multiple approaches are viable:
+- "This has {N} valid approaches with real tradeoffs. Want to discuss before I pick one?"
 
 ### 3c. Decide
 
@@ -308,7 +237,6 @@ Key tradeoff accepted:
 ```
 
 **Checkpoint**: Confirm the direction — "Lock in this approach? Or should we explore {specific alternative} more?"
-**If `--auto-approve`**: Skip the checkpoint. Lock in the approach and proceed directly to 3d.
 
 ### 3d. Decompose
 
@@ -357,7 +285,6 @@ Confidence: {X}/10
 ```
 
 **Checkpoint**: "Here's the task breakdown — {N} tasks in this order. The key dependency is {X}. Does this look right?"
-**If `--auto-approve`**: Skip the checkpoint. Proceed directly to Phase 4.
 
 ### Phase 3 Output Summary
 
@@ -389,26 +316,6 @@ Estimated tasks: {N tasks}
 Mode:      {Task Briefs (N briefs, default) | Master + Sub-Plans (N phases, escape hatch)}
 ```
 
-### If `--auto-approve` is set:
-
-Run the self-review checklist instead of prompting the user:
-
-1. All acceptance criteria from the spec (BUILD_ORDER or feature description) are addressed in the preview
-2. File paths listed are correct and exist (or will be created)
-3. The approach is consistent with established project patterns
-4. Testing approach covers the acceptance criteria
-5. No obvious gaps in the task breakdown
-
-**If all checklist items pass:** Log the preview (print it to output for the record), then proceed directly to Phase 5.
-
-**If any checklist item fails:** Log the preview with the failing items noted, then STOP and surface the issue — even in autonomous mode, a fundamentally flawed plan should not proceed.
-
-```
-AUTO-APPROVED: Plan preview passed self-review checklist. Proceeding to Phase 5.
-```
-
-### If `--auto-approve` is NOT set (default):
-
 ```
 Approve this direction to write the full plan? [y/n/adjust]
 ```
@@ -423,7 +330,7 @@ Only write the plan file after explicit approval.
 
 After Phases 1-4 (discovery/design), assess complexity and select the output mode:
 
-- **Task Brief Mode** (DEFAULT — use for all standard features): Produces `plan.md` (overview + task index) + one `task-N.md` brief per task. Each brief is a self-contained execution document for one `/execute` session. Use this for the vast majority of features — there is no task count upper boundary for this mode.
+- **Task Brief Mode** (DEFAULT — use for all standard features): Produces `plan.md` (overview + task index) + one `task-N.md` brief per task. Each brief is a self-contained execution document for one `codex /execute` session. Use this for the vast majority of features — there is no task count upper boundary for this mode.
 - **Master + Sub-Plan Mode** (EXCEPTION — escape hatch for genuinely complex features): Use ONLY when the feature has multiple distinct phases with heavy cross-phase dependencies that make a single plan unwieldy. The trigger is architectural complexity, not task count. A feature with 12 straightforward tasks fits comfortably in task brief mode. A feature with 8 tasks across truly independent phases with separate validation gates may warrant master plan mode.
 
 Announce the mode transparently:
@@ -434,119 +341,7 @@ Announce the mode transparently:
 
 ### Task Brief Mode (Default)
 
-#### 5a. Sub-Agent Path (plan-writer)
-
-When the Task tool is available, offload the heavyweight writing to the `plan-writer` sub-agent. This keeps the main planning context focused on reasoning (Phases 1-4) and delegates the mechanical file writing to a specialized agent.
-
-**Prepare the context handoff:**
-
-Collect all Phase 3 output into a structured context block. This is the primary input for the plan-writer:
-
-```
-PLANNING CONTEXT FOR PLAN-WRITER
-=================================
-Feature: {feature name}
-Feature Directory: .agents/features/{feature}/
-
---- PHASE 3 OUTPUT ---
-
-{Paste the full SYNTHESIS block from Phase 3a}
-
-{Paste the full ANALYSIS block from Phase 3b}
-
-{Paste the full APPROACH DECISION block from Phase 3c}
-
-{Paste the full TASK DECOMPOSITION block from Phase 3d}
-
---- ADDITIONAL CONTEXT ---
-
-Codebase patterns found:
-{Key patterns from Phase 2 research — file paths and brief descriptions}
-
-Prior plan references:
-{Relevant patterns from completed plans, if any}
-
-Pillar context:
-{Pillar scope and PRD requirements, if applicable}
-```
-
-**Step 1: Invoke plan-writer for `plan.md`:**
-
-```
-Task tool call:
-  subagent_type: "plan-writer"
-  description: "Write plan.md for {feature}"
-  prompt: "Write plan.md for feature '{feature}'.
-
-  {PLANNING CONTEXT block from above}
-
-  Save to: .agents/features/{feature}/plan.md
-
-  Remember:
-  - Read all target files before writing (use Read tool for current content)
-  - plan.md must be 700-1000 lines
-  - Include TASK INDEX table at the bottom
-  - Self-validate before reporting complete"
-```
-
-After the agent returns, verify:
-1. File exists at `.agents/features/{feature}/plan.md`
-2. Read it and check line count (target: 700-1000)
-3. Check TASK INDEX table is present
-
-If the file is missing or under 700 lines, fall back to 5b (inline writing).
-
-**Step 2: Invoke plan-writer for each task brief (sequentially):**
-
-For each task N (from 1 to total tasks), invoke the plan-writer:
-
-```
-Task tool call:
-  subagent_type: "plan-writer"
-  description: "Write task-{N}.md for {feature}"
-  prompt: "Write task-{N}.md for feature '{feature}'.
-
-  {PLANNING CONTEXT block from above}
-
-  This is task {N} of {total}: {task name from TASK DECOMPOSITION}
-  Target file: {target file path from decomposition}
-  Scope: {scope description from decomposition}
-  Depends on: {dependency from decomposition}
-
-  Prior task handoff: {If N > 1, paste the Handoff Notes from the prior brief's
-  prompt or read task-{N-1}.md and extract its handoff section. If N == 1, say 'None — first task.'}
-
-  Save to: .agents/features/{feature}/task-{N}.md
-
-  Remember:
-  - Read .opencode/templates/TASK-BRIEF-TEMPLATE.md first
-  - Read the target file for current content (for inline pasting)
-  - Brief must be 700-1000 lines
-  - All sections from the template are required
-  - Self-validate before reporting complete"
-```
-
-After each agent returns, verify:
-1. File exists at `.agents/features/{feature}/task-{N}.md`
-2. Read it and check line count (target: 700-1000)
-
-If any brief fails (missing or under 700 lines), note the failure and continue with remaining briefs. At the end, fall back to 5b (inline writing) ONLY for the failed briefs.
-
-**Important**: Invoke briefs sequentially, not in parallel. Each brief's "Prior Task Context" section needs to accurately describe the previous task. Sequential invocation ensures the plan-writer can read the prior brief from disk.
-
-**Step 3: Verify all artifacts:**
-
-After all invocations complete:
-1. List all files in `.agents/features/{feature}/`
-2. Verify `plan.md` + all `task-N.md` files exist
-3. Spot-check: read the first task brief and verify it has all required sections
-4. If all artifacts are present and valid, skip 5b and proceed to Output section
-
-**Fallback trigger**: If the Task tool is unavailable, or if the plan-writer agent fails on more than half the artifacts, fall back to 5b entirely.
-
-#### 5b. Inline Fallback (write directly)
-
-If the Task tool is unavailable, or if the plan-writer sub-agent fails, write the artifacts directly in the main context. This is the original Phase 5 behavior.
+#### 5a. Write plan artifacts directly
 
 **Step 1: Write `plan.md` (overview + task index)**
 
@@ -581,10 +376,10 @@ Every `plan.md` is 700-1000 lines. It is the source of truth and human-readable 
 
 **Step 2: Write task briefs (`task-N.md`) — one per target file**
 
-Using `.opencode/templates/TASK-BRIEF-TEMPLATE.md` as the structural reference, write one task brief for each task:
+Using the task brief structure below as the structural reference, write one task brief for each task:
 
 - Save to `.agents/features/{feature}/task-{N}.md`
-- Each brief is **self-contained** — `/execute` can run it without reading `plan.md` or any other file
+- Each brief is **self-contained** — `codex /execute` can run it without reading `plan.md` or any other file
 - Each brief targets **700-1000 lines** — this is achieved by pasting all context inline, not by padding
 - No advisory sections (no Feature Description, User Story, Problem Statement, Confidence Score — those live in `plan.md`)
 - Every line must be operationally useful: steps, exact code, validation commands, acceptance criteria
@@ -667,12 +462,12 @@ Create the feature directory if it doesn't exist: `.agents/features/{feature}/`
 ...
 ```
 
-### Archon Task Sync (if connected)
+### Archon Task Sync (if connected) → delegate to `archon-retrieval` subagent (Haiku)
 
-After writing the plan, sync to Archon:
-1. Call `list_projects()` to find or create project for this codebase
-2. Call `manage_task("create", ...)` for each task in the plan
-3. Store Archon task IDs in plan metadata for `/execute` to update
+After writing the plan, invoke the `archon-retrieval` subagent to sync tasks:
+1. Find or create project for this feature
+2. Create one Archon task per task brief
+3. Return task IDs to store in plan metadata for `/execute` to update
 
 ### Pipeline Handoff Write (required)
 
@@ -685,7 +480,7 @@ After writing the plan (and Archon sync if applicable), overwrite `.agents/conte
 
 - **Last Command**: /planning
 - **Feature**: {feature}
-- **Next Command**: /execute .agents/features/{feature}/plan.md
+- **Next Command**: codex /execute .agents/features/{feature}/plan.md
 - **Task Progress**: 0/{N} complete
 - **Timestamp**: {ISO 8601 timestamp}
 - **Status**: awaiting-execution
@@ -698,7 +493,7 @@ After writing the plan (and Archon sync if applicable), overwrite `.agents/conte
 
 - **Last Command**: /planning
 - **Feature**: {feature}
-- **Next Command**: /execute .agents/features/{feature}/plan-master.md
+- **Next Command**: codex /execute .agents/features/{feature}/plan-master.md
 - **Master Plan**: .agents/features/{feature}/plan-master.md
 - **Phase Progress**: 0/{M} complete
 - **Timestamp**: {ISO 8601 timestamp}
@@ -717,13 +512,13 @@ Task briefs:   .agents/features/{feature}/task-1.md
                ...
                .agents/features/{feature}/task-{N}.md
 Total:         {N} tasks, {N} briefs (one session per brief)
-Pillar: {N} — {name} (from {pillar-file-path})   ← omit if no pillar context
-PRD requirements covered: {list from pillar file PRD Coverage}   ← omit if no pillar context
 Confidence: {X}/10 for one-pass success
 Key risk: {top risk}
 Archon: {synced N tasks / not connected}
 
-Next: /execute .agents/features/{feature}/plan.md
+Next (hand to Codex):
+  codex /execute .agents/features/{feature}/task-1.md
+  (then task-2.md, task-3.md... one per session)
 ```
 
 **Master + Sub-Plan Mode:**
@@ -737,7 +532,8 @@ Confidence:  {X}/10 for one-pass success
 Key risk:    {top risk}
 Archon:      {synced N tasks / not connected}
 
-Next: /execute .agents/features/{feature}/plan-master.md
+Next (hand to Codex):
+  codex /execute .agents/features/{feature}/plan-master.md
 ```
 
 ---

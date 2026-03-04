@@ -1,5 +1,6 @@
 ---
 description: Prime agent with project context and auto-detect tech stack
+model: claude-haiku-4-5-20251001
 ---
 
 # Prime: Load Project Context + Stack Detection
@@ -51,7 +52,7 @@ git status
 
 Read these files if they exist:
 - `memory.md`
-- `.opencode/config.md`
+- `.claude/config.md`
 
 ---
 
@@ -67,7 +68,7 @@ git ls-files
 
 Read these files if they exist:
 - `memory.md`
-- `.opencode/config.md`
+- `.claude/config.md`
 - Entry point file (auto-detect)
 
 ### Auto-Detect Tech Stack
@@ -138,7 +139,7 @@ Read the first entry point found for project overview.
 
 ## Step 3: Write/Update Config
 
-If `.opencode/config.md` does not exist, create it from auto-detected values:
+If `.claude/config.md` does not exist, create it from auto-detected values:
 
 ```markdown
 # Project Configuration
@@ -168,7 +169,7 @@ If `.opencode/config.md` does not exist, create it from auto-detected values:
 - **PR Target**: {same as main branch}
 ```
 
-If `.opencode/config.md` already exists, read it and use its values (user overrides take priority over auto-detection).
+If `.claude/config.md` already exists, read it and use its values (user overrides take priority over auto-detection).
 
 ---
 
@@ -244,9 +245,9 @@ Otherwise: "No memory.md found"}
 ## Pending Work
 {If pending work found in Step 3.5:
 - **[handoff]** {Next Command} ← from last session ({Last Command} → {feature})
-- **[tasks]** {feature} — task {N}/{total} done, next: /execute .agents/features/{feature}/plan.md
-- **[plan]** {feature} — legacy plan awaiting execution: /execute .agents/features/{feature}/plan.md
-- **[master]** {feature} — phase {N}/{total} done, next: /execute .agents/features/{feature}/plan-master.md
+- **[tasks]** {feature} — task {N}/{total} done, next: `codex /execute .agents/features/{feature}/plan.md`
+- **[plan]** {feature} — legacy plan awaiting execution: `codex /execute .agents/features/{feature}/plan.md`
+- **[master]** {feature} — phase {N}/{total} done, next: `codex /execute .agents/features/{feature}/plan-master.md`
 - **[fixes]** {feature} — review found issues: /code-review-fix .agents/features/{feature}/review.md critical+major
 - **[re-review]** {feature} — fixes applied, verify: /code-review --feature {feature}
 - **[report]** {feature} — execution done, awaiting commit: /commit
@@ -292,20 +293,12 @@ Otherwise: "No README.md found"}
 - **Memory Health**: {if last session date is >7 days ago, warn "Stale — last updated {date}". Otherwise "Fresh"}
 Otherwise: "No memory.md found"}
 
-## Build State
-{If .agents/specs/build-state.json exists:
-- **Last Spec**: {lastSpec}
-- **Completed**: {count}/{total} ({pct}%)
-- **Current Pillar**: {currentPillar}
-- **Patterns**: {patternsEstablished}
-Otherwise: "No build state found. Run /mvp to start a new project."}
-
 ## Pending Work
 {If pending work found in Step 3.5:
 - **[handoff]** {Next Command} ← from last session ({Last Command} → {feature})
-- **[tasks]** {feature} — task {N}/{total} done, next: /execute .agents/features/{feature}/plan.md
-- **[plan]** {feature} — legacy plan awaiting execution: /execute .agents/features/{feature}/plan.md
-- **[master]** {feature} — phase {N}/{total} done, next: /execute .agents/features/{feature}/plan-master.md
+- **[tasks]** {feature} — task {N}/{total} done, next: `codex /execute .agents/features/{feature}/plan.md`
+- **[plan]** {feature} — legacy plan awaiting execution: `codex /execute .agents/features/{feature}/plan.md`
+- **[master]** {feature} — phase {N}/{total} done, next: `codex /execute .agents/features/{feature}/plan-master.md`
 - **[fixes]** {feature} — review found issues: /code-review-fix .agents/features/{feature}/review.md critical+major
 - **[re-review]** {feature} — fixes applied, verify: /code-review --feature {feature}
 - **[report]** {feature} — execution done, awaiting commit: /commit

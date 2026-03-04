@@ -80,10 +80,8 @@ Read the plan file.
 ### 1.5. RAG Knowledge Retrieval (Optional)
 
 If Archon MCP is available:
-- `rag_search_knowledge_base(query="...", match_count=5)` — relevant documentation
+- `rag_search_knowledge_base(query="...", match_count=5)` — relevant documentation (2-5 keywords)
 - `rag_search_code_examples(query="...", match_count=3)` — similar patterns
-- Keep queries SHORT (2-5 keywords) for best vector search results
-- Use findings to supplement the plan's implementation guidance
 
 If no Archon/RAG available, proceed with the plan as written — plans are designed to be self-contained.
 
@@ -138,24 +136,7 @@ When implementation deviates from the plan, classify immediately:
 
 **Track each divergence for the execution report** — don't rely on memory.
 
-### 2.4. Inline-from-Build Override
 
-When `/execute` is called inline from `/build` (not dispatched as a separate agent), the following behavioral overrides apply:
-
-| Behavior | Standalone (default) | Inline from `/build` |
-|----------|---------------------|---------------------|
-| Execute one brief/phase | Yes | Yes (unchanged) |
-| Rename `.done.md` artifacts | Yes | Yes (unchanged) |
-| Count progress | Yes | Yes (unchanged) |
-| Write handoff file | Yes | **No** — `/build` owns the handoff |
-| "End session" directive | Yes | **No** — return control to `/build` |
-| Report completion message | Yes | **Abbreviated** — just "Task {N}/{total} complete." |
-
-**How to detect**: The calling context (from `/build` Step 5) will explicitly state "This is an inline `/execute` call from `/build`." There is no flag — the context instruction is sufficient.
-
-**What still happens**: The `.done.md` rename (Step 6.6 completion sweep) and progress counting ALWAYS run regardless of mode. These are required for `/build`'s loop detection (checking `plan.done.md` to know when all briefs are complete).
-
-**What is suppressed**: Only the handoff write and session-ending directive in Steps 2.5/2.6 are suppressed. Everything else (implementation, validation, self-review, report) runs normally.
 
 ### 2.5. Phase Completion (for master plan / plan series phases)
 
@@ -163,9 +144,7 @@ After executing a single phase sub-plan (routed here from Step 0.5), complete th
 
 1. Let the existing completion sweep (Step 6.6) handle renaming `plan-phase-{N}.md` → `plan-phase-{N}.done.md`
 2. Determine phase progress: count `.done.md` phase files vs total phases from the master plan's SUB-PLAN INDEX
-3. **If more phases remain:**
-
-   **Standalone mode (default):** Write handoff:
+3. **If more phases remain:** Write handoff:
    ```markdown
    # Pipeline Handoff
    <!-- Auto-updated by pipeline commands. Read by /prime. Do not edit manually. -->
@@ -181,11 +160,7 @@ After executing a single phase sub-plan (routed here from Step 0.5), complete th
    Report: "Phase {N}/{total} complete. Next session: `/prime` → `/execute .agents/features/{feature}/plan-master.md` to continue with phase {N+1}."
    **End session.** Do NOT continue to the next phase — each phase gets a fresh context window.
 
-   **Inline from `/build`:** Skip handoff write. Report: "Phase {N}/{total} complete." Return control to `/build`.
-
-4. **If ALL phases done** — rename `plan-master.md` → `plan-master.done.md`.
-
-   **Standalone mode (default):** Write handoff:
+4. **If ALL phases done** — rename `plan-master.md` → `plan-master.done.md`. Write handoff:
    ```markdown
    # Pipeline Handoff
    <!-- Auto-updated by pipeline commands. Read by /prime. Do not edit manually. -->
@@ -200,11 +175,9 @@ After executing a single phase sub-plan (routed here from Step 0.5), complete th
    ```
    Report: "All {total} phases complete. Feature ready for review. Next session: `/prime` → `/code-loop {feature}`."
 
-   **Inline from `/build`:** Skip handoff write. Report: "All {total} phases complete." Return control to `/build`. The `plan-master.done.md` rename signals completion to `/build`'s loop.
+5. **If phase execution failed** — do NOT rename the phase file (no `.done.md`). Write handoff with **Status**: `blocked` and **Next Command**: `[manual intervention — phase {N} failed]`. Report the failure and stop.
 
-5. **If phase execution failed** — do NOT rename the phase file (no `.done.md`). In standalone mode: write handoff with **Status**: `blocked` and **Next Command**: `[manual intervention — phase {N} failed]`. In inline-from-build mode: skip handoff write — `/build` handles the error via stuck detection. Report the failure and stop in both modes.
-
-**Key rule**: `/execute` with a master plan executes exactly one phase per invocation. In standalone mode, this means one phase per session (the next session picks up the next phase via `/prime` → handoff). In inline-from-build mode, `/build` re-invokes `/execute` for the next phase within the same session.
+**Key rule**: `/execute` with a master plan executes exactly one phase per invocation — one phase per session. The next session picks up the next phase via `/prime` → handoff.
 
 ### 2.6. Task Brief Completion (for task brief mode)
 
@@ -212,9 +185,7 @@ After executing a single task brief (routed here from Step 0.5), complete the ta
 
 1. Let the existing completion sweep (Step 6.6) handle renaming `task-{N}.md` → `task-{N}.done.md`
 2. Determine task progress: count `.done.md` task files vs total tasks from `plan.md`'s TASK INDEX table
-3. **If more tasks remain:**
-
-   **Standalone mode (default):** Write handoff:
+3. **If more tasks remain:** Write handoff:
    ```markdown
    # Pipeline Handoff
    <!-- Auto-updated by pipeline commands. Read by /prime. Do not edit manually. -->
@@ -229,11 +200,7 @@ After executing a single task brief (routed here from Step 0.5), complete the ta
    Report: "Task {N}/{total} complete. Next session: `/prime` → `/execute .agents/features/{feature}/plan.md` to continue with task {N+1}."
    **End session.** Do NOT continue to the next task brief — each brief gets a fresh context window.
 
-   **Inline from `/build`:** Skip handoff write. Report: "Task {N}/{total} complete." Return control to `/build`.
-
-4. **If ALL tasks done** — rename `plan.md` → `plan.done.md`.
-
-   **Standalone mode (default):** Write handoff:
+4. **If ALL tasks done** — rename `plan.md` → `plan.done.md`. Write handoff:
    ```markdown
    # Pipeline Handoff
    <!-- Auto-updated by pipeline commands. Read by /prime. Do not edit manually. -->
@@ -247,11 +214,9 @@ After executing a single task brief (routed here from Step 0.5), complete the ta
    ```
    Report: "All {total} task briefs complete. Feature ready for review. Next session: `/prime` → `/code-loop {feature}`."
 
-   **Inline from `/build`:** Skip handoff write. Report: "All {total} task briefs complete." Return control to `/build`. The `plan.done.md` rename signals completion to `/build`'s loop.
+5. **If task execution failed** — do NOT rename the task file (no `.done.md`). Write handoff with **Status**: `blocked` and **Next Command**: `[manual intervention — task {N} failed]`. Report the failure and stop.
 
-5. **If task execution failed** — do NOT rename the task file (no `.done.md`). In standalone mode: write handoff with **Status**: `blocked` and **Next Command**: `[manual intervention — task {N} failed]`. In inline-from-build mode: skip handoff write — `/build` handles the error via stuck detection. Report the failure and stop in both modes.
-
-**Key rule**: `/execute` with task briefs executes exactly one brief per invocation. In standalone mode, this means one brief per session (the next session auto-detects the next undone brief via artifact scan). In inline-from-build mode, `/build` re-invokes `/execute` for the next brief within the same session.
+**Key rule**: `/execute` with task briefs executes exactly one brief per invocation — one brief per session. The next session auto-detects the next undone brief via artifact scan.
 
 ### 3. Implement Testing Strategy
 
@@ -265,7 +230,7 @@ Validation policy (non-skippable):
 - Every execution loop must run full validation depth for the current slice.
 - Minimum expected pyramid: syntax/style → type safety → unit tests → integration tests → manual verification.
 - Do not treat single checks as sufficient proof of completion.
-- Use project-configured commands from `.opencode/config.md` or auto-detected by `/prime`.
+- Use project-configured commands from `.claude/config.md` or auto-detected by `/prime`.
 
 ### 5. Self-Review (Plan Cross-Check)
 
@@ -362,8 +327,7 @@ If `.agents/INDEX.md` exists, update plan status entry:
 
 ### 6.6. Execution Report
 
-After successful execution, save the execution report using the template:
-- **Template**: `.opencode/templates/EXECUTION-REPORT-TEMPLATE.md`
+After successful execution, save the execution report:
 - **Path**: `.agents/features/{feature}/report.md`
 
 **Multi-task mode (task briefs):** If this is one of multiple task briefs:
@@ -432,7 +396,7 @@ Also display the report inline for the user. The saved file is consumed by `/sys
 - **Files modified**: {list with full paths}
 - **RAG used**: {yes — describe what was looked up / no — plan was self-contained}
 - **Archon tasks updated**: {yes — N tasks marked done / no — not connected}
-- **Dispatch used**: {yes — list tasks delegated and models used / no — all tasks self-executed}
+- **Execution agent**: Codex CLI (or specify if different agent was used)
 
 ### Completed Tasks
 

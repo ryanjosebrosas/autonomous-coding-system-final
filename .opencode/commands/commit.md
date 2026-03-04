@@ -1,5 +1,6 @@
 ---
 description: Create git commit with conventional message format
+model: claude-haiku-4-5-20251001
 ---
 
 # Commit: Create Git Commit
@@ -23,16 +24,6 @@ If staging specific files: `git diff HEAD -- $ARGUMENTS`
 
 ### 2. Generate Commit Message
 
-**If dispatch available:**
-Dispatch to T1 for fast commit message generation:
-```
-dispatch({
-  taskType: "commit-message",
-  prompt: "Write a conventional commit message for these changes.\n\nGit diff:\n{git diff HEAD}\n\nGit status:\n{git status}\n\nFormat: type(scope): short description (imperative mood, max 50 chars)\n\nOptional body (if changes are significant): what changed and why, not how. Max 3 bullet points.\n\nTypes: feat, fix, refactor, docs, test, chore, perf, style, plan\n\nReturn ONLY the commit message — no explanation, no markdown fences."
-})
-```
-
-**If dispatch unavailable:**
 Generate the commit message directly:
 - Format: `type(scope): short description` (imperative mood, max 50 chars)
 - Types: feat, fix, refactor, docs, test, chore, perf, style, plan
@@ -90,7 +81,7 @@ After successful commit, overwrite `.agents/context/next-command.md`:
 
 Derive `{feature}` from: (1) the commit scope (e.g., `feat(auth): ...` → `auth`), (2) the previous handoff file's Feature field, or (3) the most recent `.agents/features/*/report.md`.
 
-If in a `/build` loop, set **Next Command** to `/build next` and **Status** to `build-loop-continuing`.
+
 
 **If commit fails** (e.g., pre-commit hooks, merge conflict, empty commit): Write handoff with the previous feature name preserved:
 ```markdown
@@ -107,9 +98,8 @@ Report the error clearly: what failed, why, and what the user should do to fix i
 
 ### 6. Report Completion
 
-Report the commit details and suggest next steps based on context:
-- If in a `/build` loop: "Spec committed. Continuing to next spec."
-- If standalone: "Committed. Next: `/pr {feature}` or `git push` or continue development."
+Report the commit details and suggest next steps:
+- "Committed. Next: `/pr {feature}` to create a pull request."
 
 ## Notes
 

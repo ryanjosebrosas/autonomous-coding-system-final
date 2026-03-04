@@ -1,5 +1,6 @@
 ---
 description: Analyze implementation against plan with auto-diff, code-review integration, and memory suggestions
+model: claude-sonnet-4-6
 ---
 
 # System Review (Enhanced)
@@ -238,10 +239,10 @@ Alignment Score = (
 Assess adherence to documented patterns:
 
 - [ ] Followed codebase architecture (from `AGENTS.md` or `CLAUDE.md`)
-- [ ] Used documented patterns (from `.opencode/sections/*.md` auto-loaded rules)
+- [ ] Used documented patterns (from `.claude/sections/*.md` auto-loaded rules)
 - [ ] Applied testing patterns correctly (from `reference/validation-discipline.md`)
 - [ ] Met validation requirements (5-level pyramid: lint → types → unit → integration → manual)
-- [ ] Followed naming conventions (from `.opencode/config.md` and existing file patterns)
+- [ ] Followed naming conventions (from `.claude/config.md` and existing file patterns)
 - [ ] Used established error handling patterns (consistent with similar files in project)
 
 **Pattern Compliance Score**: {X}/{Y} checks passed ({Z}%)
@@ -358,20 +359,20 @@ Divergence {N}:
 
 > Be specific — include exact text to add/update in each asset.
 
-**Update Plan Command (`.opencode/commands/planning.md`):**
+**Update Plan Command (`.claude/commands/planning.md`):**
 - Add instruction: "{specific instruction to add}"
 - Clarify: "{ambiguous instruction to rewrite as: ...}"
 - Add validation requirement: "{new validation step}"
 
-**Update Execute Command (`.opencode/commands/execute.md`):**
+**Update Execute Command (`.claude/commands/execute.md`):**
 - Add to execution checklist: "{specific step}"
 - Add divergence tracking: "{what to track}"
 
-**Update Agents (`.opencode/agents/*.md`):**
+**Update Agents (`.claude/agents/*.md`):**
 - Document pattern: "{pattern name and description}"
 - Add anti-pattern warning: "{what not to do}"
 
-**Create New Command (`.opencode/commands/{command}.md`):**
+**Create New Command (`.claude/commands/{command}.md`):**
 - Purpose: "{what manual process to automate}"
 - Trigger: "{when this command should be used}"
 

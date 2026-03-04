@@ -1,5 +1,6 @@
 ---
 description: Automated review → fix → review loop until clean
+model: claude-sonnet-4-6
 ---
 
 # Code Loop: Automated Fix Loop
@@ -26,15 +27,10 @@ Incremental rule:
 ## Usage
 
 ```
-/code-loop [feature-name] [--auto] [--auto-commit] [--build]
+/code-loop [feature-name]
 ```
 
-- `feature-name` (optional): Used for commit message and report file. If omitted, read `.agents/context/next-command.md` for the active feature name.
-- `--auto` (optional): Handle Minor-only findings automatically without prompting the user. If Minor fixes touch fewer than 3 files, auto-fix them. If 3+ files, skip Minor fixes and proceed to commit. Useful for autonomous pipelines where Minor findings should not block progress.
-- `--auto-commit` (optional): When the loop exits clean (0 Critical/Major issues + all validation passes), run `/commit` automatically within this session instead of handing off. Useful for autonomous pipelines.
-- `--build` (optional): Signals this is running inside a `/build` pipeline. When combined with `--auto-commit`, tells `/commit` to write `build-loop-continuing` status with Next Command `/build next` instead of `ready-for-pr`. Also triggers `git push` after commit.
-
-**Combining flags:** `--auto --auto-commit --build` gives fully autonomous `/build` behavior: Minor findings are handled without prompting, the loop auto-commits when clean, and the handoff status is set for `/build` to continue to the next spec.
+- `feature-name` (optional): Used for report file. If omitted, read `.agents/context/next-command.md` for the active feature name.
 
 ---
 
@@ -51,117 +47,7 @@ Before starting the review loop, gather relevant documentation context:
 
 ---
 
-## Multi-Model Dispatch in Loop (Optional)
 
-The dispatch tool sends prompts to other AI models. In the code-loop context, use it for:
-
-1. **Multi-model review** — get additional review perspectives beyond the primary review
-2. **Fix delegation** — dispatch fix implementation to fast models while you orchestrate
-
-**This is optional.** If dispatch is not available, skip all dispatch steps and run the loop with the primary model.
-
-### Review Dispatch (during step 1 of each iteration)
-
-After the primary `/code-review` runs, consider dispatching for additional findings.
-
-**When to dispatch a second review:**
-- First iteration (fresh code, worth getting a second perspective)
-- When review finds security-sensitive issues (get confirmation)
-- When review finds 0 issues (sanity check — did we miss something?)
-- When changes touch multiple interconnected files
-
-**When to skip dispatch review:**
-- Later iterations with only minor fixes remaining
-- When previous dispatch round added no new findings
-- When changes are trivial (typos, formatting)
-
-```
-REVIEW_PROMPT = "Review the following code changes for Critical and Major issues only.\n\n{git diff HEAD}\n\nRespond with:\n- ISSUES FOUND: [list each issue as: Severity | File:Line | Description]\n- NO ISSUES: code is clean."
-```
-
-**First iteration (fresh code — run gauntlet):**
-```
-batch-dispatch({
-  batchPattern: "free-impl-validation",
-  prompt: REVIEW_PROMPT,
-})
-```
-Read `escalationAction` from the `## Consensus Analysis` table in the output:
-- `skip-t4` → 0-1 models found issues → proceed to fix step or commit
-- `run-t4` → 2 models found issues → run one tiebreaker, then fix
-- `fix-and-rerun` → 3+ models found issues → fix loop (step 4), then re-run gauntlet
-
-**Later iterations (targeted — single dispatch):**
-```
-dispatch({
-  taskType: "code-review",
-  prompt: REVIEW_PROMPT,
-})
-```
-
-**Security-sensitive changes (any iteration):**
-```
-dispatch({
-  taskType: "security-review",
-  prompt: REVIEW_PROMPT,
-})
-```
-Hard rule: Auth, crypto, payment changes ALWAYS go through security-review, regardless of consensus.
-
-**Merging dispatch findings with primary review:**
-- Deduplicate — if dispatch finds the same issue as primary review, note "confirmed by second model"
-- Add new findings to the review artifact with source attribution
-- Include in the review artifact so `/code-review-fix` addresses them
-
-### Fix Dispatch (during step 3 of each iteration)
-
-For simple, isolated fixes (e.g., "add missing null check at line 42", "rename variable X to Y"):
-
-**Simple fix (single file, clear issue):**
-```
-dispatch({
-  mode: "agent",
-  taskType: "simple-fix",
-  prompt: "Fix the following issue in {file}: {issue description from review}. Read the file first. Make minimal changes. Run validation after.",
-})
-```
-
-**Complex fix (multi-file or multi-concern):**
-```
-dispatch({
-  mode: "agent",
-  taskType: "complex-fix",
-  prompt: "Fix the following issues: {list from review}. Read all affected files first. Make minimal changes. Run validation after.",
-})
-```
-
-- Only dispatch fixes you can verify — review the result before accepting
-- Never dispatch architectural changes or multi-file refactors via fix dispatch
-- If the dispatched fix looks wrong, implement it yourself
-
-### Model Routing for Loop Tasks
-
-| Task | taskType | Tier |
-|------|----------|------|
-| Code review (general) | `code-review` | T2a |
-| Security review | `security-review` | T2a |
-| Architecture audit | `architecture-audit` | T2b |
-| Simple fix | `simple-fix` | T1a |
-| Complex fix | `complex-fix` | T1c |
-| Near-final sign-off | `t4-sign-off` via `batch-dispatch` | T4 |
-| Last-resort review | `final-review` | T5 |
-
-### Consensus-Gating Rule
-
-Read `escalationAction` from `batch-dispatch` output (`## Consensus Analysis` table):
-
-| `escalationAction` | Meaning | Action |
-|--------------------|---------|--------|
-| `skip-t4` | 0-1 models found issues | Proceed to commit. $0 paid cost. |
-| `run-t4` | 2 models found issues | `dispatch({ taskType: "code-review", prompt: REVIEW_PROMPT })` as tiebreaker |
-| `fix-and-rerun` | 3+ models found issues | Fix loop → re-run gauntlet. Max 3 re-gauntlet iterations. |
-
-**If dispatch unavailable:** Run the loop with the primary model only. Apply the same when-to-dispatch/skip guidance as a checklist for self-review angles (security, architecture, logic, quality).
 
 ---
 
@@ -186,12 +72,7 @@ At the start of EACH iteration, save progress checkpoint:
 
 2. **Check findings:**
    - **If 0 issues:** → Exit loop, go to commit
-   - **If only Minor issues:**
-     - **If `--auto` is set:** Auto-decide based on scope:
-       - Minor fixes touch < 3 files → auto-fix (continue to fix step with Minor scope)
-       - Minor fixes touch 3+ files → skip Minor fixes, exit loop, go to commit
-       - Log decision: "AUTO: Fixing {N} minor issues in {M} files" or "AUTO: Skipping {N} minor issues (3+ files — deferring)"
-     - **If `--auto` is NOT set:** → Ask user: "Fix minor issues or skip to commit?"
+   - **If only Minor issues:** → Ask user: "Fix minor issues or skip to commit?"
    - **If Critical/Major issues:** → Continue to fix step
 
  3. **Fix issues with `/code-review-fix` (primary path)**
@@ -209,7 +90,7 @@ At the start of EACH iteration, save progress checkpoint:
 
     `/code-review-fix` handles: reading the review, fixing by severity order, running validation after each fix. After this fix pass succeeds, mark the source review file `.done.md`.
 
-    If dispatch is available, `/code-review-fix` can delegate simple fixes to T1 models (see its Step 2b).
+
 
  4. **Run full validation for this slice:**
    - Run lint/style checks (project-configured)
@@ -228,10 +109,8 @@ At the start of EACH iteration, save progress checkpoint:
 
 | Condition | Action |
 |-----------|--------|
-| 0 issues + validation passes (no `--auto-commit`) | → Hand off to `/commit` (next session) |
-| 0 issues + validation passes (`--auto-commit`) | → Run `/commit` directly in this session |
-| Only Minor issues (`--auto`) | → Auto-fix if < 3 files; skip to commit if 3+ files |
-| Only Minor issues (no `--auto`) | → Ask user: fix or defer? |
+| 0 issues + validation passes | → Hand off to `/commit` |
+| Only Minor issues | → Ask user: fix or defer? |
 | Unfixable error detected | → Stop, report what's blocking |
 
 ### Escape Hatch: `/planning` → `/execute` for Architectural Fixes
@@ -272,26 +151,21 @@ If `/code-review-fix` cannot handle the fix (architectural changes, multi-file r
 
    Iterations: N
    Issues fixed: X (Critical: Y, Major: Z, Minor: W)
-   Status: {if --auto-commit: "Auto-committing" | else: "Ready for /commit"}
+   Status: Ready for /commit
    ```
 
-2. **If `--auto-commit`:** Run `/commit` directly in this session.
-   - **If `--build` is also set:** Tell `/commit` this is a `/build` loop — it should write `build-loop-continuing` status with Next Command `/build next`. After commit, run `git push`. If push fails, retry once. If still fails, write `blocked` handoff and STOP.
-   - **If `--build` is NOT set:** After commit succeeds, update handoff to point at `/pr`.
+2. Tell the user to run `/commit` when ready. The user reviews the output and commits when satisfied.
 
-3. **If no `--auto-commit`:** Tell the user to run `/commit` in the next session.
-   - Do NOT auto-commit. The user reviews the code-loop output and commits when ready.
-
-4. **Pipeline Handoff Write** (required): Overwrite `.agents/context/next-command.md`:
+3. **Pipeline Handoff Write** (required): Overwrite `.agents/context/next-command.md`:
    ```markdown
    # Pipeline Handoff
    <!-- Auto-updated by pipeline commands. Read by /prime. Do not edit manually. -->
 
    - **Last Command**: /code-loop
    - **Feature**: {feature}
-   - **Next Command**: {if --build and commit succeeded: "/build next" | if --auto-commit and commit succeeded: "/pr {feature}" | if commit failed: "/commit" | else: "/commit"}
+   - **Next Command**: /commit
    - **Timestamp**: {ISO 8601 timestamp}
-   - **Status**: {if --build and committed: "build-loop-continuing" | if committed: "ready-for-pr" | else: "ready-to-commit"}
+   - **Status**: ready-to-commit
    ```
 
 ---
@@ -316,15 +190,14 @@ Done marker rule:
 - **Feature**: {feature-name}
 - **Iterations**: N
 - **Final Status**: Clean / Stopped (unfixable error) / Stopped (user interrupt) / Stopped (user choice)
-- **Dispatch used**: {yes — N dispatches across M iterations / no}
 
 ### Issues Fixed by Iteration
 
-| Iteration | Critical | Major | Minor | Total | Dispatches |
-|-----------|----------|-------|-------|-------|------------|
-| 1 | X | Y | Z | T | N |
-| 2 | X | Y | Z | T | N |
-| N (final) | X | Y | Z | T | N |
+| Iteration | Critical | Major | Minor | Total |
+|-----------|----------|-------|-------|-------|
+| 1 | X | Y | Z | T |
+| 2 | X | Y | Z | T |
+| N (final) | X | Y | Z | T |
 
 ### Checkpoints Saved
 
@@ -337,12 +210,6 @@ Done marker rule:
 ```bash
 # Output from lint/typecheck/tests
 ```
-
-### Commit Info
-
-- **Hash**: {commit-hash}
-- **Message**: {full message}
-- **Files**: X changed, Y insertions, Z deletions
 
 ---
 

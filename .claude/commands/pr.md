@@ -1,5 +1,6 @@
 ---
 description: Create feature branch, push, and open PR
+model: claude-sonnet-4-6
 ---
 
 # PR: Create Branch and Pull Request
@@ -138,7 +139,7 @@ Store:
 - `MAIN_BRANCH` — the main branch name (usually `main` or `master`)
 - `BASE_SHA` — the current tip of `{REMOTE}/{MAIN_BRANCH}`
 
-If `.opencode/config.md` specifies these values, use those instead.
+If `.claude/config.md` specifies these values, use those instead.
 
 ---
 
@@ -186,21 +187,7 @@ Also read (if they exist) for richer PR body context:
 - `.agents/features/{FEATURE_NAME}/review.done.md` — code review findings addressed this loop
 - `.agents/reviews/{FEATURE_NAME}*.done.md` — legacy review location fallback
 
-**If dispatch available:**
-
-```
-PR_PROMPT = "Generate a pull request title and body for the following changes.\n\nCommits:\n{git log output}\n\nDiff stats:\n{git diff --stat output}\n\nFull diff:\n{git diff output, truncated to 300 lines if needed}\n\nExecution report summary:\n{REPORT_PATH summary if available}\n\nOutput format:\nTitle: type(scope): description (conventional commit format, max 72 chars)\n\nBody:\n## What\n- {2-4 bullets: what changed, specific and concrete}\n\n## Why\n{1-2 sentences: why this was needed}\n\n## Changes\n{Files changed grouped by area with 1-line description each}\n\n## Testing\n{Test results, validation commands run, pass/fail}\n\n## Notes\n{Breaking changes, migration steps, known skips — or None}"
-
-dispatch({
-  taskType: "pr-description",
-  prompt: PR_PROMPT,
-})
-```
-
-Use the dispatched output as the PR title and body verbatim. If the output is malformed or too short, fall back to generating directly.
-
-**If dispatch unavailable:**
-Generate directly:
+Generate the PR title and body directly:
 
 **Title format:** `type(scope): description` (conventional commit format, max 72 chars)
 
