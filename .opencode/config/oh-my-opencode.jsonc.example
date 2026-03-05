@@ -1,0 +1,31 @@
+{
+  "$schema": "./opencode/config/category-schema.json",
+  "//": "User category overrides - copy this file to your project root as 'oh-my-opencode.jsonc'",
+  "//": "Priority: project > user > default",
+  
+  "categories": {
+    "//": "Override example: change visual-engineering provider/model",
+    "// visual-engineering": {
+      "// provider": "anthropic",
+      "// model": "claude-sonnet-4-6",
+      "// temperature": 0.5
+    },
+    
+    "//": "Add custom category example",
+    "// custom-category": {
+      "// model": "my-custom-model",
+      "// provider": "my-provider",
+      "// temperature": 0.5,
+      "// description": "Custom category for specialized tasks",
+      "// promptAppend": "Specialized instructions..."
+    }
+  },
+  
+  "defaults": {
+    "fallbackCategory": "unspecified-low",
+    "fallbackModel": {
+      "provider": "zai-coding-plan",
+      "model": "glm-4.7"
+    }
+  }
+}

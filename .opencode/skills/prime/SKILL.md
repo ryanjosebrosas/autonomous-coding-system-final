@@ -106,6 +106,95 @@ When reading `memory.md`, assess staleness:
 A stale memory means the Key Decisions and Gotchas sections may no longer reflect the
 current codebase state. Flag this so the user can decide whether to update memory.md.
 
+## Wisdom Injection
+
+Load and inject feature wisdom at session start:
+
+### When to Inject
+
+- During `/prime` for any feature with active work
+- When `/execute` starts a new task
+- When `/code-loop` begins review
+- When `/ralph-loop` starts iteration
+
+### How to Inject
+
+```typescript
+// Build wisdom block for prompts
+const wisdomBlock = buildInjectionBlock({
+  feature: currentFeature,
+  files: modifiedFiles,
+  keywords: taskKeywords,
+  patterns: expectedPatterns
+})
+
+// Prepend to task context
+const prompt = `${wisdomBlock}${originalPrompt}`
+```
+
+### What Gets Injected
+
+1. **Gotchas** — Anti-patterns to avoid
+2. **Failures** — Problems encountered before
+3. **Conventions** — Patterns to follow
+4. **Successes** — What worked well
+
+### Injection Format
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+WISDOM FROM PREVIOUS SESSIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+## ⚠️ GOTCHAS TO AVOID
+- **Pattern**: Issue description
+  - Fix: Resolution
+  - Location: Where it applies
+
+## ❌ FAILURES AVOIDED
+- **Pattern**: What went wrong
+  - Resolution: How it was fixed
+  - Severity: critical/major/minor
+
+## 📋 CONVENTIONS TO FOLLOW
+- **Pattern**: What to do
+  - Location: Where to apply
+
+## ✅ SUCCESSFUL PATTERNS
+- **Approach**: What worked
+  - Context: Situation
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+### Wisdom Context in Prime Report
+
+When presenting `/prime` output, include wisdom section:
+
+```
+### Wisdom Context
+
+Feature: {feature}
+- Conventions: {count} patterns
+- Gotchas: {count} warnings
+- Failures: {count} avoided
+- Successes: {count} proven
+
+Top 3 relevant insights:
+1. {gotcha_1}
+2. {convention_1}
+3. {success_1}
+```
+
+### First Wisdom Extraction
+
+If no wisdom exists for a feature, prime creates an initial file:
+
+```
+.agents/wisdom/{feature}/
+├── learnings.md      # Patterns, conventions, successes
+└── README.md         # Wisdom system explanation
+```
+
 ## Anti-Patterns
 
 **Silent missing detection** — When a stack detection layer finds nothing, do not skip

@@ -1,45 +1,45 @@
 # Project Configuration
-<!-- Auto-detected by /prime. Override any value manually. -->
+<!-- Auto-detected by /prime on 2026-03-06. Override any value manually. -->
 <!-- Run /prime to re-detect and update auto-detected values. -->
 <!-- Manual overrides in this file take priority over auto-detection. -->
 
 ## Stack
-- **Language**: {auto-detected or specify: e.g., TypeScript, Python, Rust, Go}
-- **Framework**: {auto-detected or specify: e.g., Next.js, FastAPI, Axum}
-- **Package Manager**: {auto-detected or specify: npm, yarn, pnpm, pip, cargo, go}
+- **Language**: TypeScript
+- **Framework**: OpenCode AI Plugin Framework
+- **Package Manager**: npm (detected in .opencode/)
 
 ## Validation Commands
 
 These commands are used by `/planning`, `/final-review`, `/code-loop`, and other pipeline commands.
 
-- **L1 Lint**: {e.g., `npx eslint .` or `ruff check .` or `cargo clippy`}
-- **L1 Format**: {e.g., `npx prettier --check .` or `ruff format --check .` or `cargo fmt --check`}
-- **L2 Types**: {e.g., `npx tsc --noEmit` or `mypy src/` or `cargo check`}
-- **L3 Unit Tests**: {e.g., `npx jest` or `pytest` or `cargo test` or `go test ./...`}
-- **L4 Integration Tests**: {e.g., `npx jest --testPathPattern=integration` or `pytest -m integration`}
-- **L5 Manual**: {describe manual verification steps, or "N/A"}
+- **L1 Lint**: not detected — no eslint config found
+- **L1 Format**: not detected — no prettier config found
+- **L2 Types**: not detected — no tsconfig.json found at root
+- **L3 Unit Tests**: not detected — no jest or vitest config found
+- **L4 Integration Tests**: not detected
+- **L5 Manual**: Code review via /code-loop
 
 ## Source Directories
-- **Source**: {e.g., src/ | app/ | lib/}
-- **Tests**: {e.g., tests/ | test/ | __tests__/ | src/**/*.test.ts}
-- **Config**: {e.g., config/ | .env}
+- **Source**: .opencode/
+- **Tests**: .opencode/**/*.test.ts (pattern, not verified)
+- **Config**: .opencode/config/, .claude/config/
 
 ## Git
-- **Remote**: {auto-detected from `git remote -v`, usually "origin"}
-- **Main Branch**: {auto-detected, usually "main" or "master"}
-- **PR Target**: {same as main branch, or specify}
+- **Remote**: origin (https://github.com/ryanjosebrosas/autonomous-coding-system-final.git)
+- **Main Branch**: master
+- **PR Target**: master
 
 ## RAG Integration (Optional)
 
-If you have a RAG knowledge base MCP configured:
-
-- **RAG Available**: {yes/no}
-- **RAG Tool Prefix**: {e.g., archon_rag_, rag_, knowledge_}
-- **Indexed Sources**: {list what's indexed: e.g., "Supabase docs, FastAPI docs, project wiki"}
+- **RAG Available**: no (Archon MCP not detected)
+- **RAG Tool Prefix**: N/A
+- **Indexed Sources**: N/A
 
 ## Notes
 
-- `/prime` auto-detects values and fills in blanks — it never overwrites manual entries
-- Validation commands should work from the project root directory
-- If a validation level doesn't apply (e.g., no type checker), set it to "N/A"
-- Model tier mapping is only needed if you use dispatch — the system works without it
+- This is an OpenCode AI coding system framework (meta-framework for AI-assisted development)
+- Framework files are in .opencode/, mirrored to .claude/ for Claude Code compatibility
+- Validation commands are custom (no standard npm scripts detected)
+- L1-L4 validation is performed by /code-loop with model-based code review
+- L5 is manual human verification via /final-review
+- Project uses the PIV Loop methodology: Plan → Implement → Validate

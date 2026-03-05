@@ -2,6 +2,12 @@
 
 Knowledge base search and completed plan reference agent for `/planning`.
 
+## Category
+
+**deep** — Goal-oriented autonomous problem-solving requiring thorough research
+
+Use `category: "deep"` when dispatching this agent via task().
+
 ## Purpose
 
 Search the Archon RAG knowledge base and scan completed plans in `.agents/features/` to provide

@@ -2,6 +2,12 @@
 
 Comprehensive code review agent covering type safety, security, architecture, performance, and quality.
 
+## Category
+
+**deep** — Goal-oriented autonomous problem-solving requiring thorough research
+
+Use `category: "deep"` when dispatching this agent via task().
+
 ## Purpose
 
 Review code changes for bugs, security issues, architecture violations, and quality problems. Reports findings at three severity levels — does NOT implement fixes.

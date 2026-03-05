@@ -159,9 +159,68 @@ while context is warm. Resist it. The handoff exists specifically to pause here.
 6. **Artifact renames are functional** — They drive /prime's pending work detection
 7. **Bad divergences are process failures** — Document them to improve future plans
 
+## Wisdom Extraction
+
+After successful execution, extract wisdom from the work:
+
+### When to Extract
+
+- After each task brief completes
+- After divergences (good or bad)
+- After resolving issues in `/code-loop`
+- After `/ralph-loop` iterations
+
+### What to Extract
+
+| Source | Category | Example |
+|--------|----------|---------|
+| Good divergence | Success | "Found better pattern at X" |
+| Bad divergence | Failure | "Misread requirement, was Y" |
+| Code review finding | Gotcha | "Anti-pattern: nested promises" |
+| Established pattern | Convention | "Always use Z for database ops" |
+| Test failure | Failure | "Edge case: empty array input" |
+
+### How to Extract
+
+```typescript
+// After task completion
+const wisdom = extractFromReport({
+  divergences: executionReport.divergences,
+  issues: codeReviewFindings,
+  successes: executionReport.successes
+})
+
+// Categorize
+categorizeItems(wisdom)
+
+// Store
+addWisdomItems(feature, wisdom)
+```
+
+### Wisdom File Location
+
+```
+.agents/wisdom/{feature}/learnings.md
+```
+
+Format:
+```markdown
+## Session: {timestamp}
+
+### Conventions
+- {pattern}: {location} — {rationale}
+
+### Gotchas
+- {anti-pattern}: {location} — {warning}
+
+### Failures Avoided
+- {failure}: {manifestation} — {prevention}
+```
+
 ## Related Commands
 
 - `/execute {plan-path}` — The execution workflow this skill supports
 - `/planning {feature}` — Creates the plan artifacts that /execute consumes
 - `/code-loop {feature}` — Next step after all task briefs complete (awaiting-review)
 - `/prime` — Detects pending execution work via artifact scan
+- `/wisdom` — View accumulated wisdom for a feature

@@ -2,6 +2,12 @@
 
 Documentation search, best practices, and version compatibility checks.
 
+## Category
+
+**deep** — Goal-oriented autonomous problem-solving requiring thorough research
+
+Use `category: "deep"` when dispatching this agent via task().
+
 ## Purpose
 
 Research external documentation, library APIs, best practices, and compatibility information. Used when codebase exploration alone isn't sufficient.

@@ -8,9 +8,12 @@ A production-grade AI-assisted development framework built on top of [OpenCode](
 
 This is not a prompt collection. It is a complete development operating system for AI-assisted engineering with:
 
-- **19 slash commands** covering the full development lifecycle
-- **5 specialized sub-agents** for parallel research and plan writing
+- **23 slash commands** covering the full development lifecycle
+- **11 specialized sub-agents** for parallel research, planning, and execution
+- **8 task categories** with model-optimized routing
+- **46 lifecycle hooks** for completion guarantees and state persistence
 - **4 TypeScript orchestration tools** for multi-model dispatch, batch comparison, council discussion, and benchmarking
+- **Wisdom accumulation system** that learns from each task execution
 - **A structured methodology** with enforced planning discipline, 5-level validation, and state management across sessions
 - **Archon MCP integration** for persistent task tracking and RAG-powered knowledge retrieval
 
@@ -229,6 +232,15 @@ opencode-ai-coding-system/
 | `/prd` | Structured Product Requirements Document creation from MVP. **You approve.** |
 | `/pillars` | Define architectural pillars with gate criteria. **You approve.** |
 | `/decompose` | Break PRD into ordered specs in `BUILD_ORDER.md`. **You approve.** |
+
+### Planning Commands
+
+| Command | Description |
+|---------|-------------|
+| `/prometheus` | Interview-mode planner that asks questions before writing. Discovery → Gap analysis → Plan → Review. |
+| `/start-work {feature}` | Execution trigger. Reads plan, switches to Atlas mode, executes todos. |
+| `/ultrawork` | Deep autonomous work trigger. Spawns Hephaestus with maximum autonomy for complex tasks. |
+| `/ralph-loop {feature}` | Self-referential improvement loop. Execute → Review → Fix → Re-review until clean. |
 
 ### Code Quality
 

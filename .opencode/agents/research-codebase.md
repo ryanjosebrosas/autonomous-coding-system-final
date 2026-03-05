@@ -2,6 +2,12 @@
 
 Parallel codebase exploration agent. Finds files, extracts patterns, and reports findings.
 
+## Category
+
+**deep** — Goal-oriented autonomous problem-solving requiring thorough research
+
+Use `category: "deep"` when dispatching this agent via task().
+
 ## Purpose
 
 Explore the codebase to answer questions about structure, patterns, conventions, and integration points. Used by `/planning` and `/build` to gather context before implementation.

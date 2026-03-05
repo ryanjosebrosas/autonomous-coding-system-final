@@ -1,4 +1,7 @@
 import { tool } from "@opencode-ai/plugin"
+import { CATEGORY_MODEL_ROUTES, CATEGORY_PROMPT_APPENDS, type CategoryPromptAppendKey } from "./delegate-task/constants"
+import { resolveCategory, isValidCategory, type CategoryRouteResult } from "./delegate-task/category-selector"
+import { getSkillContentForPrompt } from "../features/skill-loader"
 
 // ============================================================================
 // CONFIGURATION
@@ -522,25 +525,63 @@ async function dispatchCascade(
 // ROUTE RESOLUTION
 // ============================================================================
 
+interface ResolveRouteResult {
+  route: ModelRoute | CascadeRoute
+  source: string
+  promptAppend?: string
+  categoryWarning?: string
+}
+
 function resolveRoute(
   taskType?: string,
   provider?: string,
   model?: string,
-): { route: ModelRoute | CascadeRoute; source: string } | null {
-  // Explicit provider/model overrides taskType
+  category?: string,
+  taskDescription?: string,
+): ResolveRouteResult | null {
+  // Explicit provider/model overrides everything
   if (provider && model) {
     return {
       route: { provider, model, label: `${provider}/${model}` },
       source: "explicit",
     }
   }
-  // TaskType lookup
+  
+  // Category routing takes precedence over taskType
+  if (category && isValidCategory(category)) {
+    const categoryResult = resolveCategory(category, {
+      warnOnInvalid: false,
+      useFallbackOnInvalid: true,
+      taskDescription,
+    })
+    
+    if (categoryResult) {
+      const promptAppend = CATEGORY_PROMPT_APPENDS[category as CategoryPromptAppendKey] || ""
+      return {
+        route: {
+          provider: categoryResult.provider,
+          model: categoryResult.model,
+          label: categoryResult.label,
+        },
+        source: `category:${category}`,
+        promptAppend,
+        categoryWarning: categoryResult.gateWarning,
+      }
+    }
+  }
+  
+  // TaskType lookup (fallback)
   if (taskType) {
     const route = TASK_ROUTES[taskType]
     if (route) return { route, source: `taskType:${taskType}` }
     return { route: FALLBACK_ROUTE, source: `taskType:${taskType} (unknown → fallback)` }
   }
-  return null
+  
+  // No routing info - use fallback
+  return {
+    route: FALLBACK_ROUTE,
+    source: "fallback (no routing info)",
+  }
 }
 
 // ============================================================================
@@ -849,6 +890,9 @@ export default tool({
     "Use taskType for auto-routing or specify provider/model explicitly.\n\n" +
     "For sequential dispatch (e.g., /prime then /planning in the same session),\n" +
     "call dispatch once to get a sessionId, then pass that sessionId in subsequent calls.\n\n" +
+    "For category-based routing, use 'category' with 8 semantic categories:\n" +
+    "visual-engineering, ultrabrain, artistry, quick, deep, unspecified-low, unspecified-high, writing.\n\n" +
+    "Use load_skills to inject domain-specific instructions from SKILL.md files.\n\n" +
     "NOTE: If sessionId does not appear as a parameter in this tool's schema, the MCP\n" +
     "tool definition is stale (cached from before sessionId was added). Fix: restart\n" +
     "opencode serve and start a new Claude session to pick up the updated schema.",
@@ -869,7 +913,30 @@ export default tool({
         "Auto-route to the correct model by task type. " +
         "Examples: 'code-review' → GLM-5, 'execution' → Qwen3.5-Plus, " +
         "'planning' → cascade (free→paid), 'commit-message' → Haiku. " +
-        "Full table in model-strategy.md. Overridden by explicit provider/model.",
+        "Full table in model-strategy.md. Overridden by explicit provider/model. " +
+        "Overrides 'category' if both are specified.",
+      ),
+
+    category: tool.schema
+      .string()
+      .optional()
+      .describe(
+        "Auto-route by semantic category. Use INSTEAD of taskType for modern routing.\n" +
+        "MUST PROVIDE ONE OF: category OR taskType (category preferred).\n" +
+        "Categories: visual-engineering (UI/frontend), ultrabrain (hard logic), " +
+        "artistry (creative), quick (trivial), deep (investigation), " +
+        "unspecified-low (simple general), unspecified-high (complex general), writing (docs).\n" +
+        "Overridden by explicit provider/model. Overridden by taskType if both specified.",
+      ),
+
+    load_skills: tool.schema
+      .array(tool.schema.string())
+      .optional()
+      .describe(
+        "List of skill names to load and prepend to the prompt. " +
+        "Skills are loaded from .opencode/skills/{name}/SKILL.md and .claude/skills/{name}/SKILL.md. " +
+        "Example: ['frontend-ui-ux', 'git-master'] loads UI skills and git expertise. " +
+        "Skills are prepended BEFORE category prompt append.",
       ),
 
     provider: tool.schema
@@ -939,7 +1006,7 @@ export default tool({
 
   async execute(args, context) {
     const mode: DispatchMode = (args.mode as DispatchMode) || "text"
-    const taskDescription = args.description || args.taskType || "Dispatch task"
+    const taskDescription = args.description || args.taskType || (args.category ? `category:${args.category}` : "Dispatch task")
 
     // Default timeouts by mode, with no-timeout override for long-running sessions
     let defaultTimeout = mode === "command" ? COMMAND_TIMEOUT_MS
@@ -958,13 +1025,22 @@ export default tool({
     if (args.prompt == null) {
       return "# Dispatch Error\n\nNo prompt provided."
     }
-    if (!args.taskType && !args.provider && !args.model) {
+    
+    // Check routing options - need at least one
+    const hasExplicitRouting = args.provider && args.model
+    const hasTaskType = !!args.taskType
+    const hasCategory = !!args.category
+    
+    if (!hasExplicitRouting && !hasTaskType && !hasCategory) {
       return (
         "# Dispatch Error\n\n" +
-        "No routing info. Provide `taskType` (auto-route) " +
-        "or both `provider` + `model` (explicit route)."
+        "No routing info. Provide one of:\n" +
+        "- `category` (preferred): semantic routing to 8 categories\n" +
+        "- `taskType`: legacy routing by task type\n" +
+        "- both `provider` + `model`: explicit routing"
       )
     }
+    
     if ((args.provider && !args.model) || (!args.provider && args.model)) {
       return (
         "# Dispatch Error\n\n" +
@@ -980,10 +1056,38 @@ export default tool({
       )
     }
 
-    // ── 2. Resolve route ──
-    const resolved = resolveRoute(args.taskType, args.provider, args.model)
+    // ── 2. Resolve route (now with category support) ──
+    const resolved = resolveRoute(
+      args.taskType as string | undefined,
+      args.provider as string | undefined,
+      args.model as string | undefined,
+      args.category as string | undefined,
+      args.prompt,
+    )
     if (!resolved) {
       return "# Dispatch Error\n\nCould not resolve model route."
+    }
+
+    // ── 3. Build prompt with skill injection ──
+    let finalPrompt = args.prompt as string
+    
+    // Load skills if specified
+    if (args.load_skills && Array.isArray(args.load_skills) && args.load_skills.length > 0) {
+      const skillContent = getSkillContentForPrompt(args.load_skills as string[])
+      if (skillContent) {
+        finalPrompt = `${skillContent}\n\n---\n\n${finalPrompt}`
+      }
+    }
+    
+    // Append category prompt if available
+    if (resolved.promptAppend) {
+      if (finalPrompt.includes("\n\n---\n\n")) {
+        // Skills prepend already done - append category
+        finalPrompt = `${finalPrompt}\n\n${resolved.promptAppend}`
+      } else {
+        // No skills - prepend category
+        finalPrompt = `${resolved.promptAppend}\n\n---\n\n${finalPrompt}`
+      }
     }
 
     // ── 3. Health check ──
@@ -1033,17 +1137,17 @@ export default tool({
           if (mode === "command" && args.command) {
             text = await dispatchCommand(
               sessionId, route.provider, route.model,
-              args.command, args.prompt, timeoutMs,
+              args.command, finalPrompt, timeoutMs,
             )
           } else if (mode === "agent") {
             text = await dispatchAgent(
               sessionId, route.provider, route.model,
-              args.prompt, taskDescription, timeoutMs,
+              finalPrompt, taskDescription, timeoutMs,
             )
           } else {
             text = await dispatchText(
               sessionId, route.provider, route.model,
-              args.prompt, timeoutMs,
+              finalPrompt, timeoutMs,
             )
           }
           if (text) {
@@ -1063,11 +1167,11 @@ export default tool({
         result = await dispatchCascade(
           sessionId,
           resolved.route as CascadeRoute,
-          args.prompt,
+          finalPrompt,
           mode,
           taskDescription,
           args.command,
-          args.prompt, // For command mode, prompt = command arguments
+          finalPrompt, // For command mode, prompt = command arguments
           args.taskType,
         )
       }
@@ -1078,17 +1182,17 @@ export default tool({
       if (mode === "command" && args.command) {
         text = await dispatchCommand(
           sessionId, route.provider, route.model,
-          args.command, args.prompt, timeoutMs,
+          args.command, finalPrompt, timeoutMs,
         )
       } else if (mode === "agent") {
         text = await dispatchAgent(
           sessionId, route.provider, route.model,
-          args.prompt, taskDescription, timeoutMs,
+          finalPrompt, taskDescription, timeoutMs,
         )
       } else {
         text = await dispatchText(
           sessionId, route.provider, route.model,
-          args.prompt, timeoutMs,
+          finalPrompt, timeoutMs,
         )
       }
 
@@ -1108,17 +1212,17 @@ export default tool({
         if (mode === "command" && args.command) {
           fallbackText = await dispatchCommand(
             sessionId, FALLBACK_ROUTE.provider, FALLBACK_ROUTE.model,
-            args.command, args.prompt, timeoutMs,
+            args.command, finalPrompt, timeoutMs,
           )
         } else if (mode === "agent") {
           fallbackText = await dispatchAgent(
             sessionId, FALLBACK_ROUTE.provider, FALLBACK_ROUTE.model,
-            args.prompt, taskDescription, timeoutMs,
+            finalPrompt, taskDescription, timeoutMs,
           )
         } else {
           fallbackText = await dispatchText(
             sessionId, FALLBACK_ROUTE.provider, FALLBACK_ROUTE.model,
-            args.prompt, timeoutMs,
+            finalPrompt, timeoutMs,
           )
         }
         if (fallbackText) {
@@ -1241,6 +1345,15 @@ export default tool({
     }
     if (mode === "command" && args.command) {
       meta.push(`**Command**: /${args.command} ${args.prompt}`)
+    }
+    if (args.category) {
+      meta.push(`**Category**: ${args.category}`)
+    }
+    if (args.load_skills && Array.isArray(args.load_skills) && args.load_skills.length > 0) {
+      meta.push(`**Skills**: ${(args.load_skills as string[]).join(", ")}`)
+    }
+    if (resolved.categoryWarning) {
+      meta.push(`**Warning**: ${resolved.categoryWarning}`)
     }
 
     return `# Dispatch Result\n\n${meta.join("\n")}\n\n---\n\n${result.text}`

@@ -1,0 +1,182 @@
+{
+  "$schema": "./category-schema.json",
+  "categories": {
+    "visual-engineering": {
+      "model": "gemini-3-pro-preview",
+      "provider": "ollama-cloud",
+      "temperature": 0.7,
+      "description": "Frontend, UI/UX, design, styling, animation",
+      "useWhen": [
+        "UI components",
+        "CSS/styling",
+        "responsive design",
+        "animation",
+        "accessibility",
+        "visual polish"
+      ],
+      "avoidWhen": [
+        "backend logic",
+        "database operations",
+        "API endpoints",
+        "business logic"
+      ],
+      "promptAppend": "You are a frontend specialist focused on visual excellence. Prioritize:\n- Pixel-perfect implementation\n- Responsive design patterns\n- Accessibility (WCAG standards)\n- Performance optimization\n- Modern CSS/animation techniques\n\nDeliver clean, maintainable UI code.",
+      "reasoning": "medium",
+      "creativity": "high"
+    },
+    "ultrabrain": {
+      "model": "gpt-5.3-codex",
+      "provider": "openai",
+      "temperature": 0.1,
+      "description": "Genuinely hard, logic-heavy tasks requiring deep reasoning",
+      "useWhen": [
+        "Complex algorithms",
+        "Architecture decisions",
+        "Security design",
+        "Performance optimization",
+        "Distributed systems",
+        "Compiler/interpreter logic"
+      ],
+      "avoidWhen": [
+        "Simple CRUD operations",
+        "UI styling",
+        "Documentation",
+        "trivial fixes"
+      ],
+      "promptAppend": "You are solving a genuinely difficult problem that requires exceptional reasoning capability.\n\nApproach:\n1. Break down the problem systematically\n2. Identify all edge cases and constraints\n3. Consider multiple solution approaches\n4. Evaluate tradeoffs explicitly\n5. Implement the optimal solution\n\nThink step by step. Quality over speed.",
+      "reasoning": "xhigh",
+      "creativity": "low"
+    },
+    "artistry": {
+      "model": "gemini-3-pro-preview",
+      "provider": "ollama-cloud",
+      "temperature": 0.9,
+      "description": "Complex problem-solving with unconventional, creative approaches",
+      "useWhen": [
+        "Innovative solutions needed",
+        "Standard patterns don't fit",
+        "Creative problem-solving",
+        "Novel algorithm design",
+        "Out-of-the-box thinking"
+      ],
+      "avoidWhen": [
+        "Standard, well-defined tasks",
+        "Time-critical simple fixes",
+        "Established patterns available"
+      ],
+      "promptAppend": "You are a creative problem-solver approaching challenges with unconventional thinking.\n\nPermission to:\n- Challenge assumptions\n- Explore non-obvious solutions\n- Combine ideas from different domains\n- Propose novel approaches\n\nCreativity welcome. Standard solutions discouraged.",
+      "reasoning": "high",
+      "creativity": "max"
+    },
+    "quick": {
+      "model": "claude-haiku-4-5-20251001",
+      "provider": "anthropic",
+      "temperature": 0.1,
+      "description": "Trivial tasks - single file changes, typo fixes, simple modifications",
+      "useWhen": [
+        "Single file changes",
+        "Typo fixes",
+        "Simple bug fixes",
+        "Minor refactoring",
+        "Quick configurations"
+      ],
+      "avoidWhen": [
+        "Multi-file changes",
+        "Architecture decisions",
+        "Complex logic",
+        "Security-sensitive code"
+      ],
+      "promptAppend": "Quick task mode. Focus on:\n- Speed\n- Accuracy\n- Minimal changes\n- No over-engineering\n\nGet in, make the change, get out.",
+      "reasoning": "low",
+      "creativity": "low"
+    },
+    "deep": {
+      "model": "gpt-5.3-codex",
+      "provider": "bailian-coding-plan-test",
+      "temperature": 0.3,
+      "description": "Goal-oriented autonomous problem-solving requiring thorough research",
+      "useWhen": [
+        "Complex debugging",
+        "Root cause analysis",
+        "Cross-module investigation",
+        "Codebase exploration",
+        "Pattern discovery"
+      ],
+      "avoidWhen": [
+        "Well-defined simple tasks",
+        "Documentation only",
+        "Quick syntax fixes"
+      ],
+      "promptAppend": "You are on a deep investigation mission.\n\nProtocol:\n1. Research thoroughly before acting\n2. Use all available tools (grep, read, search)\n3. Consider multiple hypotheses\n4. Verify findings with evidence\n5. Document your reasoning\n\nTake the time needed to be thorough.",
+      "reasoning": "medium",
+      "creativity": "medium"
+    },
+    "unspecified-low": {
+      "model": "claude-sonnet-4-6",
+      "provider": "anthropic",
+      "temperature": 0.3,
+      "description": "Tasks that don't fit other categories, low effort required",
+      "useWhen": [
+        "General tasks",
+        "Low complexity work",
+        "Default for simple requests"
+      ],
+      "avoidWhen": [
+        "Visual/UI work (use visual-engineering)",
+        "Hard logic problems (use ultrabrain)",
+        "Creative challenges (use artistry)"
+      ],
+      "promptAppend": "General-purpose execution. Focus on:\n- Clear implementation\n- Following existing patterns\n- Clean code\n- Proper error handling\n\nStraightforward, reliable execution.",
+      "reasoning": "medium",
+      "creativity": "low"
+    },
+    "unspecified-high": {
+      "model": "claude-opus-4-6",
+      "provider": "anthropic",
+      "temperature": 0.2,
+      "description": "Complex tasks that don't fit other categories, high effort required",
+      "useWhen": [
+        "Complex general tasks",
+        "Cross-cutting concerns",
+        "Multi-system work",
+        "High-stakes decisions"
+      ],
+      "avoidWhen": [
+        "Visual/UI work (use visual-engineering)",
+        "Genuinely hard logic (use ultrabrain)",
+        "Need creative approach (use artistry)"
+      ],
+      "promptAppend": "High-stakes general task requiring careful execution.\n\nPrioritize:\n- Thoroughness\n- Correctness\n- Edge case handling\n- Clear documentation\n- Maintainability\n\nTake time to get it right.",
+      "reasoning": "high",
+      "creativity": "low"
+    },
+    "writing": {
+      "model": "kimi-k2.5",
+      "provider": "bailian-coding-plan-test",
+      "temperature": 0.5,
+      "description": "Documentation, prose, technical writing",
+      "useWhen": [
+        "Documentation",
+        "README files",
+        "Technical guides",
+        "API documentation",
+        "Changelog entries"
+      ],
+      "avoidWhen": [
+        "Code implementation",
+        "Algorithm design",
+        "Architecture decisions"
+      ],
+      "promptAppend": "You are a technical writer.\n\nFocus on:\n- Clarity and readability\n- Proper structure and organization\n- Accurate technical content\n- Audience-appropriate language\n- Complete coverage\n\nWrite documentation that developers actually want to read.",
+      "reasoning": "low",
+      "creativity": "medium"
+    }
+  },
+  "defaults": {
+    "fallbackCategory": "unspecified-low",
+    "fallbackModel": {
+      "provider": "zai-coding-plan",
+      "model": "glm-4.7"
+    }
+  }
+}

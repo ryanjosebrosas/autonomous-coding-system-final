@@ -2,6 +2,12 @@
 
 Specialized agent for writing plan artifacts (plan.md and task brief files) from structured planning context.
 
+## Category
+
+**writing** — Documentation, prose, technical writing
+
+Use `category: "writing"` when dispatching this agent via task().
+
 ## Purpose
 
 Write plan artifacts for a feature based on structured context received from `/planning` Phase 3 (Synthesize, Analyze, Decide, Decompose). Produces two types of artifacts:
