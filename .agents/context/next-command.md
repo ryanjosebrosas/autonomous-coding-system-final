@@ -4,29 +4,26 @@
 
 | Field | Value |
 |-------|-------|
-| **Last Command** | `/execute` |
+| **Last Command** | `/commit` |
 | **Feature** | fix-rules-file |
-| **Status** | awaiting-review |
-| **Next Command** | `/code-loop fix-rules-file` |
+| **Status** | ready-for-pr |
+| **Next Command** | `/pr fix-rules-file` |
 | **Task Progress** | 1/1 complete |
-| **Timestamp** | 2026-03-07T03:20:00Z |
+| **Timestamp** | 2026-03-07T04:45:00Z |
 
-## Execution Summary
+## Summary
 
-- `.opencode/rules` updated — all stale path references replaced
-- Stale tokens removed: `.agents/plans/`, `.agents/reviews/`, `.agents/reports/`, `.agents/specs/`, `build-state.json`, `BUILD_ORDER.md`, `PILLARS.md`
-- Canonical paths in place: `.agents/features/{feature}/`, `.agents/context/next-command.md`
+All pending work committed:
+- `refactor(agents)`: prometheus removed, resolve-agent null-assertion fixed, glm-4.7 to glm-5:cloud fallback, category-schema description made optional
+- `feat(pipeline)`: E2E pipeline loop tests (35 tests), rules file stale paths fixed
 
-## Artifacts
+## Pipeline Validation
 
-- Plan: `.agents/features/fix-rules-file/plan.done.md`
-- Task: `.agents/features/fix-rules-file/task-1.done.md`
-- Report: `.agents/features/fix-rules-file/report.md`
-
-## Prior Feature (also ready to commit)
-
-- **prometheus-planning-merge** — 6/6 tasks complete, review clean, ready for `/commit`
+- 512/512 tests passing
+- tsc --noEmit clean
+- opencode run --dir working directory fix confirmed
+- Full /execute simulation: PIPELINE_OK
 
 ## Next Session
 
-Run `/prime` then `/code-loop fix-rules-file` to review and commit.
+System is production-ready. Optionally run /pr fix-rules-file to open a PR, or start new feature work with /prime -> /planning {feature}.
