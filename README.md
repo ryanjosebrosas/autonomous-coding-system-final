@@ -1,404 +1,529 @@
-# Claude AI Coding System
+# opencode-ai-coding-system
 
-A production-grade AI-assisted development framework for Claude Code. This is a complete **development operating system** with structured workflows, multi-agent orchestration, and human oversight at every step.
+`opencode-ai-coding-system` is a production AI coding framework built on top of OpenCode CLI.  
+It turns raw AI chat sessions into a disciplined engineering workflow with planning, execution gates, review loops, and cross-session memory.
 
----
-
-## Why This Exists
-
-Building software with AI is chaotic. Models hallucinate, lose context between sessions, and make changes without oversight. This system solves three critical problems:
-
-| Problem | Solution |
-|---------|----------|
-| **Context Loss** | Session handoff via `.agents/context/next-command.md` — every session knows exactly where you left off |
-| **Cost Overruns** | Model tiering — Opus orchestrates, Codex executes, GLM-5:cloud handles utilities |
-| **Quality Issues** | PIV Loop with mandatory planning and review gates before any code ships |
+If you have used AI coding tools before, you already know the pain this solves: each session forgets context, plans drift, and code can ship without proper review. This system adds structure so work stays traceable, testable, and shippable.
 
 ---
 
-## Architecture Overview
+## Why this exists
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                              ORCHESTRATION LAYER                             │
-│                                                                              │
-│  ┌──────────────────┐    ┌──────────────────┐    ┌──────────────────┐       │
-│  │    Sisyphus      │    │      Oracle      │    │      Metis       │       │
-│  │  (claude-sonnet-4-6)   │    │  (claude-sonnet-4-6)   │    │  (claude-sonnet-4-6)   │       │
-│  │   Orchestrator   │───▶│   Consultation   │    │   Gap Analysis   │       │
-│  └────────┬─────────┘    └──────────────────┘    └──────────────────┘       │
-│           │                                                                  │
-│           │ delegates via task()                                            │
-│           ▼                                                                  │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                              EXECUTION LAYER                                 │
-│                                                                              │
-│  ┌──────────────────┐    ┌──────────────────┐    ┌──────────────────┐       │
-│  │   Hephaestus     │    │ Sisyphus-Junior  │    │      Momus       │       │
-│  │  (gpt-5.3-codex) │    │  (gpt-5.3-codex) │    │  (claude-sonnet-4-6)   │       │
-│  │   Deep Worker    │    │ Category Executor│    │  Plan Reviewer   │       │
-│  └──────────────────┘    └──────────────────┘    └──────────────────┘       │
-│                                                                              │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                              UTILITY LAYER                                   │
-│                                                                              │
-│  ┌──────────────────┐    ┌──────────────────┐    ┌──────────────────┐       │
-│  │     Explore      │    │    Librarian     │    │      Atlas       │       │
-│  │  (GLM-5:cloud)   │    │  (GLM-5:cloud)   │    │  (GLM-5:cloud)   │       │
-│  │  Codebase Grep   │    │  External Docs   │    │  Todo Tracking   │       │
-│  └──────────────────┘    └──────────────────┘    └──────────────────┘       │
-│                                                                              │
-│  ┌──────────────────┐                                                        │
-│  │ Multimodal-Looker│                                                        │
-│  │ (Gemini-3-Flash) │                                                        │
-│  │  PDF/Image Parse │                                                        │
-│  └──────────────────┘                                                        │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+AI coding is powerful, but default usage has three recurring failures:
 
-### Model Assignment
+1. **Stateless sessions**  
+   Every new session starts cold unless context is manually reconstructed.
 
-| Role | Model | Agents |
-|------|-------|--------|
-| **Orchestration** | claude-sonnet-4-6 | Sisyphus |
-| **Consultation** | claude-sonnet-4-6 | Oracle, Metis, Momus |
-| **Execution** | gpt-5.3-codex | Hephaestus, Sisyphus-Junior |
-| **Utility** | GLM-5:cloud | Atlas, Librarian, Explore |
-| **Vision** | Gemini-3-Flash | Multimodal-Looker |
+2. **Plan drift**  
+   Work often diverges from the intended design over multiple sessions.
+
+3. **Weak quality gates**  
+   Code is frequently produced quickly, then committed without systematic review.
+
+This framework fixes those problems with:
+
+- **Mandatory planning artifacts** in `.agents/features/{feature}/`
+- **Session handoff state** in `.agents/context/next-command.md`
+- **A pipeline state machine** that tracks where the feature is
+- **Automated review/fix loops** before commit and PR
 
 ---
 
-## The PIV Loop
+## What it is made of
 
-Every feature follows **Plan → Implement → Validate**. No exceptions.
+The system has a clean split between static framework code and dynamic work artifacts.
 
-```
-┌─────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────┐
-│  START  │────▶│  /planning  │────▶│  /execute   │────▶│  MORE   │
-└─────────┘     │  {feature}  │     │  plan.md    │     │ TASKS?  │
-                └──────┬──────┘     └─────────────┘     └────┬────┘
-                       │                                      │
-                       ▼                                      │ yes
-                ┌─────────────┐                               │
-                │    USER     │◀──────────────────────────────┘
-                │  APPROVES?  │
-                └──────┬──────┘
-                       │ yes
-                       ▼
-                ┌─────────────┐     ┌─────────────┐     ┌─────────┐
-                │ /code-loop  │────▶│   ISSUES?   │────▶│  /commit │
-                │  {feature}  │     │             │ no  │   /pr    │
-                └─────────────┘     └──────┬──────┘     └─────────┘
-                       ▲                   │ yes
-                       └───────────────────┘
-```
+- **Framework layer**: `.opencode/`  
+  Commands, hooks, agent definitions, skills, and TypeScript pipeline logic.
 
-### Hard Rules
+- **Working layer**: `.agents/`  
+  Generated plan/task/report/review files and the cross-session handoff file.
 
-| Rule | Enforcement |
-|------|-------------|
-| **Planning is mandatory** | `/planning` auto-invoked on "implement", "add", "refactor" |
-| **User approval required** | Every plan must be reviewed and approved |
-| **Opus never edits directly** | Orchestrator delegates ALL file edits via `task()` |
-| **Validation at every level** | Lint → Types → Tests → Human review |
+This separation matters because framework behavior stays stable while feature work changes continuously.
 
 ---
 
-## Agent System
+## The core pipeline
 
-### 10 Specialized Agents
+The full lifecycle is:
 
-```
-                              ┌─────────────────┐
-                              │    SISYPHUS     │
-                              │  Orchestrator   │
-                              │ (claude-sonnet-4-6)   │
-                              └────────┬────────┘
-                                       │
-           ┌───────────────────────────┼───────────────────────────┐
-           │                           │                           │
-           ▼                           ▼                           ▼
-    ┌─────────────┐            ┌─────────────┐            ┌─────────────┐
-    │  PLANNING   │            │ EXECUTION   │            │  RESEARCH   │
-    └──────┬──────┘            └──────┬──────┘            └──────┬──────┘
-           │                          │                          │
-    ┌──────┴──────┐            ┌──────┴──────┐            ┌──────┴──────┐
-    │             │            │             │            │             │
-    ▼             ▼            ▼             ▼            ▼             ▼
-┌───────┐   ┌───────┐    ┌───────┐   ┌───────┐    ┌───────┐   ┌───────┐
-│ Metis │   │ Momus │    │Hephae-│   │Sisyph-│    │Explore│   │Librar-│
-│ (Gap  │   │(Plan  │    │ stus  │   │Junior │    │(Code- │   │ ian   │
-│Analyze│   │Review)│    │(Deep) │   │(Tasks)│    │ base) │   │(Docs) │
-└───────┘   └───────┘    └───────┘   └───────┘    └───────┘   └───────┘
+```text
+/prime → /mvp → /prd → /pillars → /decompose → /planning → /execute → /code-loop → /commit → /pr
 ```
 
-### Agent Reference
+In practice, you run **one command per session** (except `/commit` followed by `/pr` as the final pair).  
+That keeps each context window focused and prevents accidental scope bleed.
+
+Typical feature rhythm:
+
+- Session 1: `/prime` → `/planning {feature}` → end
+- Session 2: `/prime` → `/execute plan.md` (task 1) → end
+- Session 3: `/prime` → `/execute plan.md` (task 2) → end
+- Session N: `/prime` → `/code-loop {feature}` → end
+- Session N+1: `/prime` → `/commit` → `/pr` → end
+
+Session continuity is maintained by `.agents/context/next-command.md`.  
+Every command updates that handoff file when it completes. `/prime` reads it and tells you exactly what to do next.
+
+---
+
+## Pipeline states
+
+The TypeScript state machine tracks the pipeline using these states:
+
+| State | Meaning |
+|---|---|
+| `awaiting-execution` | Plan exists and is ready for `/execute` |
+| `executing-tasks` | Task briefs are being implemented |
+| `executing-series` | Multi-phase execution is active |
+| `awaiting-review` | All tasks done, ready for `/code-loop` |
+| `awaiting-fixes` | Review found issues that must be fixed |
+| `awaiting-re-review` | Fixes were applied, review must run again |
+| `ready-to-commit` | Review is clean, safe to commit |
+| `ready-for-pr` | Commit created, ready to open PR |
+| `pr-open` | Terminal success state |
+| `blocked` | Manual intervention required |
+
+These states are not cosmetic. They gate valid next actions and reduce guesswork in long feature cycles.
+
+---
+
+## Command reference
+
+### Session start
+
+#### `/prime`
+
+Run this first in every session.
+
+It loads project context and answers three questions immediately: what stack this repo uses, what state the current feature is in, and what command should run next.
+
+It checks dirty git state, reads memory and handoff files, detects language/framework/test setup, and surfaces pending work from both the handoff file and artifact scan.
+
+Model: `glm-5:cloud`
+
+```bash
+opencode run "/prime"
+```
+
+---
+
+### Product foundation (run once at project start)
+
+#### `/mvp`
+
+Interactive discovery for the product big idea. Runs a Socratic conversation to extract, pressure-test, and articulate the product vision. Produces `mvp.md` as the compass for everything downstream.
+
+Model: `claude-opus-4-6`
+
+#### `/prd`
+
+Transforms MVP direction into a full Product Requirements Document: architecture, tech stack, API contracts, data models, and implementation phases.
+
+Model: `claude-opus-4-6`
+
+#### `/pillars`
+
+Extracts infrastructure pillars from the PRD and orders them with dependency gates. Tells you what must be built first and what criteria must pass before moving on.
+
+Model: `claude-opus-4-6`
+
+#### `/decompose`
+
+Per-pillar deep research that produces planning-ready spec files. Run once per pillar before feature-level planning starts.
+
+Model: `claude-opus-4-6`
+
+---
+
+### Feature pipeline (run for every feature)
+
+#### `/planning {feature}`
+
+Mandatory planning command before any implementation. It runs a structured 7-phase process:
+
+1. **Intent classification** — what kind of work is this?
+2. **Discovery interview** — Socratic questions to surface scope and constraints
+3. **Codebase research** — explore/librarian agents search for patterns and integration points
+4. **Design reasoning** — synthesis, dependency analysis, risk assessment, approach decision
+5. **Task decomposition** — break work into atomic task briefs with wave/dependency mapping
+6. **Gap analysis** — Metis agent reviews for hidden assumptions and failure modes
+7. **Plan preview** — user approval gate before writing artifacts
+
+Outputs:
+- `.agents/features/{feature}/plan.md` — overview, decisions, task index
+- `.agents/features/{feature}/task-{N}.md` — one brief per task, each 700+ lines, self-contained
+
+This is a hard gate. `/execute` requires a valid planning artifact and rejects ad-hoc prompts.
+
+#### `/execute {plan.md}`
+
+Implements one task brief per session from the planning artifacts.
+
+Each run detects which task brief is next (based on which `task-{N}.done.md` files already exist), implements exactly that task, writes a report, and advances the pipeline state. It will not skip ahead or implement multiple tasks in one session.
+
+Output: `.agents/features/{feature}/report.md`
+
+#### `/code-loop {feature}`
+
+Automated review → fix → re-review cycle. Runs until code is clean — meaning no Critical or Major findings remain. Minor issues can be accepted explicitly.
+
+Each iteration:
+1. Runs code review and writes `review-{N}.md`
+2. Applies fixes in severity order (Critical first)
+3. Re-runs review
+4. Continues until clean or escape condition
+
+Model: `gpt-5.3-codex`
+
+#### `/commit`
+
+Creates a conventional commit (`type(scope): description`) and performs an artifact sweep — renaming `report.md` to `report.done.md` so `/prime` correctly detects the committed state next session.
+
+Scope stages only files relevant to the current feature. `git add -A` is forbidden.
+
+Model: `glm-5:cloud`
+
+#### `/pr`
+
+Creates a feature branch if needed, pushes commits, and opens a GitHub PR with a generated description from commit history and plan artifacts.
+
+Model: `gpt-5.3-codex`
+
+---
+
+### Quality and review
+
+#### `/code-review`
+
+Technical review only. Finds bugs, security issues, and quality problems. Classifies findings as Critical (blocks commit), Major (fix before merge), or Minor (consider fixing). Reports findings — does not apply fixes.
+
+Model: `gpt-5.3-codex`
+
+#### `/code-review-fix {review.md}`
+
+Applies fixes from a review file in severity order. Use when you want an explicit fix pass outside of the full `/code-loop` automation.
+
+#### `/final-review`
+
+Human approval gate before commit. Use it when you want a final checkpoint before shipping.
+
+#### `/system-review`
+
+Post-implementation meta-review. Compares the plan against the actual implementation, finds divergence, and suggests process improvements for future sessions.
+
+Model: `gpt-5.3-codex`
+
+#### `/council {topic}`
+
+Multi-perspective architecture discussion for difficult technical decisions. Standalone — invoke at any point when tradeoffs are unclear and you want structured analysis before committing to an approach.
+
+---
+
+## Agent architecture
+
+Agents are registered in TypeScript with explicit model assignments and permission levels.
 
 | Agent | Model | Role | Permissions |
-|-------|-------|------|-------------|
-| **Sisyphus** | claude-sonnet-4-6 | Main orchestrator, workflow management | Full |
-| **Oracle** | claude-sonnet-4-6 | Architecture consultation, debugging help | Read-only |
-| **Metis** | claude-sonnet-4-6 | Pre-planning gap analysis | Read-only |
-| **Momus** | claude-sonnet-4-6 | Plan completeness review | Read-only |
-| **Hephaestus** | gpt-5.3-codex | Deep autonomous implementation | Full (no delegation) |
-| **Sisyphus-Junior** | gpt-5.3-codex | Category-dispatched execution | Full (no delegation) |
-| **Atlas** | GLM-5:cloud | Todo tracking, progress management | Full (no delegation) |
-| **Explore** | GLM-5:cloud | Internal codebase grep | Read-only |
-| **Librarian** | GLM-5:cloud | External documentation search | Read-only |
-| **Multimodal-Looker** | Gemini-3-Flash | PDF/image analysis | Vision-only |
+|---|---|---|---|
+| Sisyphus | `claude-sonnet-4-6` | Main orchestrator, routing and workflow control | Full |
+| Oracle | `claude-opus-4-6` | Read-only architecture consultant for hard decisions | Read-only |
+| Metis | `claude-sonnet-4-6` | Pre-planning gap analyzer, finds hidden assumptions | Read-only |
+| Momus | `claude-opus-4-6` | Plan quality reviewer, rejects vague plans | Read-only |
+| Hephaestus | `gpt-5.3-codex` | Deep autonomous worker for logic-heavy tasks | Full |
+| Sisyphus-Junior | `gpt-5.3-codex` | Category-dispatched executor for task() calls | Full (no delegation) |
+| Atlas | `glm-5:cloud` | Todo and progress orchestration across sessions | Full (no delegation) |
+| Explore | `glm-5:cloud` | Internal codebase grep and pattern discovery | Read-only |
+| Librarian | `glm-5:cloud` | External documentation and OSS example search | Read-only |
+| Multimodal-Looker | `gemini-3-flash-preview` | PDF, image, and diagram analysis | Vision-only |
 
-### Permission Levels
-
-| Level | read | write | edit | bash | grep | delegate |
-|-------|------|-------|------|------|------|----------|
-| `full` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| `full-no-task` | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ |
-| `read-only` | ✓ | ✗ | ✗ | ✗ | ✓ | ✗ |
-| `vision-only` | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
+Each agent is optimized for a specific job. Routing work to the right agent reduces token waste and improves output consistency. Explore and Librarian are cheap background agents — fire them in parallel for research. Oracle and Momus are expensive — use them for decisions, not grunt work.
 
 ---
 
-## Delegation System
+## Hook system
 
-### Auto-Invoke /planning
+Hooks run automatically and enforce discipline without user micromanagement.
 
-When Sisyphus detects implementation intent ("implement X", "add Y", "refactor Z"), it **automatically invokes `/planning`**:
+### Tier 1: Continuation (highest priority)
 
-```
-User: "implement auth system"
-         ↓
-Sisyphus: "I detect implementation intent. Invoking /planning auth-system..."
-         ↓
-/planning runs full interview workflow
-         ↓
-User approves plan
-         ↓
-Execution begins via task()
-```
+- `todo-continuation` — Preserves todos across context compaction so work does not disappear mid-session
+- `atlas` — Boulder state tracking for task orchestration across sessions
+- `session-recovery` — Detects errors and provides recovery guidance
+- `compaction-todo-preserver` — Saves todo state before context windows compact
+- `background-notification` — Routes background task completion events
 
-### Category Dispatch
+### Tier 2: Session
 
-All execution routes through `task()` with categories:
+- `agent-usage-reminder` — Reminds to use Explore/Librarian before direct grep (saves tokens and gives better results)
+- `command-model-router` — Routes slash commands to their configured models automatically
 
-```typescript
-task(
-  category="deep",           // Model selection
-  load_skills=["execute"],   // Skill injection
-  prompt="Implement auth middleware..."
-)
-```
+### Tier 3: Tool-Guard
 
-| Category | Model | Use For |
-|----------|-------|---------|
-| `visual-engineering` | claude-sonnet-4-6 | Frontend, UI/UX, styling |
-| `ultrabrain` | claude-sonnet-4-6 | Hard logic, algorithms |
-| `deep` | claude-sonnet-4-6 | Autonomous problem-solving |
-| `quick` | claude-sonnet-4-6 | Single file changes, typos |
-| `writing` | claude-sonnet-4-6 | Documentation, prose |
-| `artistry` | claude-sonnet-4-6 | Creative, non-standard solutions |
+- `rules-injector` — Injects `.opencode/rules` into every session (commit hygiene, anti-patterns, state management rules)
+- `comment-checker` — Flags unnecessary AI-generated comments added to code
+- `directory-agents-injector` — Injects AGENTS.md context when navigating directories
+- `directory-readme-injector` — Injects directory README.md for local module context
 
-### Token-Conscious Routing
+### Tier 4: Transform
 
-**Opus orchestrates. Codex executes. GLM-5:cloud researches.**
+Reserved for upcoming transforms.
 
-| Task | Route To | NOT |
-|------|----------|-----|
-| File edits | `task(category="quick")` | Direct Edit tool |
-| Implementation | `task(category="deep")` | Direct Edit tool |
-| Codebase search | `task(subagent_type="explore")` | Direct Grep |
-| External docs | `task(subagent_type="librarian")` | Direct WebFetch |
+### Tier 5: Skill
+
+- `category-skill-reminder` — Ensures task dispatch includes relevant skill loading
+
+### Pipeline hook
+
+`pipeline-hook` fires at session start, reads `next-command.md`, and emits a system reminder with the current pipeline state and next suggested command.
 
 ---
 
-## Slash Commands
+## Skills
 
-### Session Management
+Skills are markdown knowledge modules injected into agents via `load_skills=["skill-name"]` during task dispatch. They provide command-specific expertise and constrain agent behavior to domain-appropriate patterns.
 
-| Command | Purpose |
-|---------|---------|
-| `/prime` | Load context, detect stack, surface pending work. **Run first.** |
+Available skills mirror the command set:
 
-### Planning Pipeline
-
-| Command | Purpose |
-|---------|---------|
-| `/planning {feature}` | Interactive discovery → plan + task briefs |
-| `/execute {plan.md}` | Implement from plan (one task per session) |
-| `/code-loop {feature}` | Review → fix → re-review cycle |
-| `/commit` | Conventional commit with scope |
-| `/pr {feature}` | Create pull request |
-
-### Project Foundation
-
-| Command | Purpose |
-|---------|---------|
-| `/mvp` | Big-idea discovery via Socratic interview |
-| `/prd` | Product Requirements Document |
-| `/pillars` | Architectural pillars with gate criteria |
-| `/decompose` | Break PRD into ordered specs |
-
-### Code Quality
-
-| Command | Purpose |
-|---------|---------|
-| `/code-review` | Technical review (Critical/Major/Minor) |
-| `/code-review-fix {review}` | Apply fixes by severity |
-| `/final-review` | Human approval gate |
-| `/system-review` | Plan vs implementation divergence |
-
----
-
-## State Management
-
-### Pipeline Handoff
-
-Session continuity via `.agents/context/next-command.md`:
-
-```markdown
-# Pipeline Handoff
-- Last Command: /execute (task 2 of 4)
-- Feature: user-auth
-- Next Command: /execute .agents/features/user-auth/plan.md
-- Task Progress: 2/4 complete
-- Status: executing-tasks
-```
-
-### Artifact Lifecycle
-
-```
-plan.md ──▶ task-{N}.md ──▶ task-{N}.done.md ──▶ plan.done.md
-                                                      │
-                                                      ▼
-                                               report.md ──▶ report.done.md
-                                                      │
-                                                      ▼
-                                               review.md ──▶ review.done.md
-```
-
-| Artifact | Created By | Marked Done By |
-|----------|-----------|----------------|
-| `plan.md` | `/planning` | `/execute` (all tasks done) |
-| `task-{N}.md` | `/planning` | `/execute` |
-| `report.md` | `/execute` | `/commit` |
-| `review.md` | `/code-review` | `/commit` |
-
-### Directory Structure
-
-```
-.agents/
-├── context/
-│   └── next-command.md      ← Pipeline handoff
-├── features/{name}/
-│   ├── plan.md              ← Feature plan
-│   ├── task-{N}.md          ← Task briefs
-│   ├── report.md            ← Execution report
-│   └── review.md            ← Code review
-└── specs/
-    ├── BUILD_ORDER.md
-    └── PILLARS.md
-
-.opencode/
-├── agents/
-│   └── registry.ts          ← Agent definitions
-├── commands/
-│   └── planning.md          ← /planning methodology
-├── config/
-│   └── load-categories.ts   ← Category → model mapping
-├── hooks/
-│   └── *.ts                 ← Lifecycle hooks
-└── skills/
-    └── {skill}/SKILL.md     ← Loadable skills
+```text
+agent-browser    code-loop        code-review      code-review-fix
+commit           council          decompose        execute
+mvp              pillars          planning-methodology  pr
+prd              prime            system-review    validation
 ```
 
 ---
 
-## Lifecycle Hooks
+## Directory structure
 
-Key hooks for completion guarantees:
-
-| Hook | Purpose |
-|------|---------|
-| `todo-continuation` | Preserves todos across context compactions |
-| `category-skill-reminder` | Reminds to load skills for categories |
-| `agent-usage-reminder` | Suggests explore/librarian over direct tools |
-| `session-recovery` | Detects errors, provides recovery |
-| `command-model-router` | Routes commands to appropriate models |
+```text
+opencode-ai-coding-system/
+├── .opencode/                      # Framework (static, version-controlled)
+│   ├── commands/                   # 15 slash command specs (*.md)
+│   ├── agents/                     # Agent registry, resolver, permissions (TypeScript)
+│   ├── hooks/                      # 14 hooks organized by tier (TypeScript)
+│   ├── skills/                     # 16 loadable knowledge modules (*.md)
+│   ├── pipeline/                   # State machine, handoff, artifact logic (TypeScript)
+│   ├── config/                     # Zod schemas and category loader
+│   ├── tests/                      # 512 tests (Vitest)
+│   ├── rules                       # Global rules injected every session
+│   └── oh-my-opencode.jsonc        # Agent and category model assignments
+│
+├── .agents/                        # Working artifacts (dynamic, per-feature)
+│   ├── context/
+│   │   └── next-command.md         # Cross-session pipeline handoff
+│   └── features/{name}/
+│       ├── plan.md                 # Feature plan, decisions, task index
+│       ├── task-{N}.md             # Task briefs (one per /execute session)
+│       ├── report.md               # Execution report
+│       ├── review.md               # Code review findings
+│       └── *.done.md               # Completed artifact (renamed suffix)
+│
+├── AGENTS.md                       # System instructions loaded by OpenCode
+└── README.md
+```
 
 ---
 
-## Getting Started
+## Artifact lifecycle
 
-### 1. Copy Framework
+Artifacts in `.agents/features/{feature}/` use a `.done.md` suffix to track completion state. This is machine-detectable, not just cosmetic — `/prime` and the pipeline logic rely on it to infer current position accurately.
+
+```text
+plan.md       →  plan.done.md        (all tasks completed)
+task-1.md     →  task-1.done.md      (task implemented)
+report.md     →  report.done.md      (committed)
+review.md     →  review.done.md      (findings addressed)
+```
+
+If you see a file without `.done.md`, that stage is still in progress.
+
+---
+
+## Model assignment reference
+
+Model mapping is defined in `.opencode/oh-my-opencode.jsonc`.
+
+```text
+Agents:
+  sisyphus            ->  anthropic/claude-sonnet-4-6
+  oracle              ->  anthropic/claude-opus-4-6
+  momus               ->  anthropic/claude-opus-4-6
+  metis               ->  anthropic/claude-sonnet-4-6
+  hephaestus          ->  openai/gpt-5.3-codex
+  sisyphus-junior     ->  openai/gpt-5.3-codex
+  librarian           ->  ollama/glm-5:cloud
+  explore             ->  ollama/glm-5:cloud
+  atlas               ->  ollama/glm-5:cloud
+  multimodal-looker   ->  ollama-cloud/gemini-3-flash-preview
+
+Categories (task() dispatch):
+  all categories      ->  openai/gpt-5.3-codex
+```
+
+---
+
+## TypeScript infrastructure
+
+Core implementation in `.opencode/`, compiled with `tsc`, tested with Vitest.
+
+| File | Purpose |
+|---|---|
+| `pipeline/state-machine.ts` | 10 states, valid transitions enforced |
+| `pipeline/handoff.ts` | Read/write `next-command.md` |
+| `pipeline/artifacts.ts` | Discover task briefs, resolve next pending |
+| `pipeline/commands.ts` | Map state to suggested next command |
+| `agents/registry.ts` | Source of truth for all agent definitions |
+| `agents/resolve-agent.ts` | Agent resolution with fallback chains |
+| `config/category-schema.ts` | Zod validation for category dispatch config |
+
+Status: 512 tests passing, TypeScript clean.
+
+---
+
+## Running commands
+
+Interactive mode is recommended for conversational commands like `/planning`, `/mvp`, and `/prd`.
 
 ```bash
-cp -r claude-ai-coding-system/.opencode your-project/
-cp -r claude-ai-coding-system/.agents your-project/
-cp claude-ai-coding-system/AGENTS.md your-project/
+# Open interactive TUI from project directory
+opencode
+
+# One-shot run
+opencode run --model anthropic/claude-sonnet-4-6 "your message"
+
+# One-shot with explicit working directory
+opencode run --dir "/path/to/project" --model anthropic/claude-sonnet-4-6 "your message"
+
+# Run a slash command directly
+opencode run "/prime"
+opencode run "/planning user-auth"
+opencode run "/execute .agents/features/user-auth/plan.md"
 ```
 
-### 2. Start Session
+---
+
+## Getting started
+
+Use this exact sequence for a new project adopting the framework.
+
+**Step 1: Start every session with /prime**
 
 ```bash
-/prime                    # Load context
-/planning {feature}       # Plan your feature
-# (approve plan)
-/execute plan.md          # Execute task 1
-# (repeat for each task)
-/code-loop {feature}      # Review cycle
-/commit && /pr {feature}  # Ship it
+opencode run "/prime"
 ```
 
-### Session Flow
+**Step 2: Define product direction (once per project)**
 
-```
-Session 1: /prime → /planning feature → END (plan approved)
-Session 2: /prime → /execute plan.md  → END (task 1)
-Session 3: /prime → /execute plan.md  → END (task 2)
-Session N: /prime → /code-loop        → END (clean)
-Session N+1: /prime → /commit → /pr   → END (shipped)
+```bash
+opencode run "/mvp"
+opencode run "/prd"
+opencode run "/pillars"
 ```
 
+**Step 3: Research each pillar**
+
+```bash
+opencode run "/decompose <pillar-name>"
+```
+
+Repeat for each pillar in dependency order.
+
+**Step 4: Plan a feature**
+
+```bash
+opencode run "/planning user-auth"
+```
+
+Go through the interactive interview. Approve the plan preview when it looks right.
+
+**Step 5: Execute task briefs (one per session)**
+
+```bash
+opencode run "/execute .agents/features/user-auth/plan.md"
+```
+
+Run this across multiple sessions until all task briefs are complete. The system picks the next undone brief automatically.
+
+**Step 6: Run the review loop**
+
+```bash
+opencode run "/code-loop user-auth"
+```
+
+**Step 7: Commit and open PR**
+
+```bash
+opencode run "/commit"
+opencode run "/pr"
+```
+
 ---
 
-## Requirements
+## How a feature gets built — end to end
 
-| Requirement | Purpose |
-|-------------|---------|
-| Claude Code CLI | Base AI coding assistant |
-| `git` CLI | Version control |
-| `gh` CLI | Pull request creation |
-| Node.js / Bun | TypeScript infrastructure |
+Assume feature name: `user-auth`.
 
-### Model Access
+**Session 1**
+- Run `/prime`
+- Run `/planning user-auth`
+- System runs discovery interview, researches codebase, reasons through design, generates plan
+- Output: `plan.md` + `task-1.md` through `task-N.md`
+- Handoff written: next command is `/execute`
 
-The system uses these models (configure via your provider):
+**Sessions 2 through N (one per task brief)**
+- Run `/prime` — handoff surfaces next task
+- Run `/execute .agents/features/user-auth/plan.md`
+- System detects next undone brief, implements exactly that task
+- `task-{N}.md` renamed to `task-{N}.done.md`
+- Handoff updated
 
-- **Claude Sonnet 4.6** — Orchestration, consultation
-- **GPT-5.3-Codex** — Execution agents (Hephaestus, Sisyphus-Junior)
-- **GLM-5** — Utility agents (Ollama)
-- **Gemini-3-Flash** — Vision tasks
+**Review session**
+- Run `/prime`
+- Run `/code-loop user-auth`
+- Loop reviews, fixes, re-reviews until clean
+- Pipeline state advances to `ready-to-commit`
 
----
+**Ship session**
+- Run `/prime`
+- Run `/commit`
+- Run `/pr`
+- Pipeline reaches `pr-open`
 
-## Key Principles
-
-1. **Opus orchestrates, never implements** — All file edits delegated via `task()`
-2. **Planning before implementation** — `/planning` auto-invoked for implementation requests
-3. **One task per session** — Context windows are finite; embrace the limit
-4. **Handoff preserves state** — `next-command.md` tells you exactly what's next
-5. **Skills enhance agents** — Load domain-specific knowledge via `load_skills=[]`
-
----
-
-## License
-
-MIT
+Each session has a deterministic next action. The handoff file carries continuity so you never need to remember where you left off.
 
 ---
 
-## Contributing
+## How to think about this system
 
-1. Fork the repository
-2. Run `/planning your-feature`
-3. Follow the PIV Loop
-4. Submit a PR
+The fastest way to use this framework well is to treat it like a CI pipeline for AI sessions:
+
+- Planning artifacts are the source of truth for what gets built
+- The handoff file is the session bridge — do not edit it manually
+- The state machine is the traffic controller — it tells you what is valid next
+- The review loop is the safety net — nothing ships until it is clean
+
+Follow that model and AI work stops feeling like ad hoc chat. It becomes reproducible engineering.
+
+---
+
+## Quick reference
+
+```text
+Always first:      /prime
+
+Project setup:     /mvp -> /prd -> /pillars -> /decompose
+
+Per feature:
+  Plan:            /planning {feature}
+  Execute:         /execute .agents/features/{feature}/plan.md   (repeat per task)
+  Review:          /code-loop {feature}
+  Ship:            /commit  then  /pr
+
+Quality tools:
+  /code-review
+  /code-review-fix {review.md}
+  /final-review
+  /system-review
+  /council {topic}
+```
