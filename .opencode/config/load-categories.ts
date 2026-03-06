@@ -25,8 +25,8 @@ function getDefaultCategories(): CategoriesConfig {
   return {
     categories: {
       "visual-engineering": {
-        model: "gemini-3-flash-preview",
-        provider: "ollama",
+        model: "gpt-5.3-codex",
+        provider: "openai",
         temperature: 0.7,
         description: "Frontend, UI/UX, design, styling, animation",
         useWhen: ["UI components", "CSS/styling", "responsive design"],
@@ -47,8 +47,8 @@ function getDefaultCategories(): CategoriesConfig {
         creativity: "low",
       },
       "artistry": {
-        model: "gemini-3-flash-preview",
-        provider: "ollama",
+        model: "gpt-5.3-codex",
+        provider: "openai",
         temperature: 0.9,
         description: "Creative problem-solving",
         useWhen: ["Innovative solutions", "Non-standard tasks"],
@@ -58,8 +58,8 @@ function getDefaultCategories(): CategoriesConfig {
         creativity: "max",
       },
       "quick": {
-        model: "glm-4.7:cloud",
-        provider: "ollama",
+        model: "gpt-5.3-codex",
+        provider: "openai",
         temperature: 0.1,
         description: "Trivial tasks, single file changes",
         useWhen: ["Single file changes", "Typo fixes", "Simple modifications"],
@@ -69,8 +69,8 @@ function getDefaultCategories(): CategoriesConfig {
         creativity: "low",
       },
       "deep": {
-        model: "qwen3-coder-next",
-        provider: "ollama",
+        model: "gpt-5.3-codex",
+        provider: "openai",
         temperature: 0.3,
         description: "Goal-oriented autonomous problem-solving",
         useWhen: ["Complex debugging", "Root cause analysis"],
@@ -80,8 +80,8 @@ function getDefaultCategories(): CategoriesConfig {
         creativity: "medium",
       },
       "unspecified-low": {
-        model: "qwen3-coder-next:cloud",
-        provider: "ollama",
+        model: "gpt-5.3-codex",
+        provider: "openai",
         temperature: 0.3,
         description: "General tasks, low complexity",
         useWhen: ["General tasks", "Low complexity work"],
@@ -91,8 +91,8 @@ function getDefaultCategories(): CategoriesConfig {
         creativity: "low",
       },
       "unspecified-high": {
-        model: "deepseek-v3.1:671b-cloud",
-        provider: "ollama",
+        model: "gpt-5.3-codex",
+        provider: "openai",
         temperature: 0.2,
         description: "Complex tasks, high effort",
         useWhen: ["Complex general tasks", "Cross-cutting concerns"],
@@ -102,8 +102,8 @@ function getDefaultCategories(): CategoriesConfig {
         creativity: "low",
       },
       "writing": {
-        model: "glm-5",
-        provider: "ollama",
+        model: "gpt-5.3-codex",
+        provider: "openai",
         temperature: 0.5,
         description: "Documentation, prose, technical writing",
         useWhen: ["Documentation", "README files", "Technical guides"],
@@ -116,8 +116,8 @@ function getDefaultCategories(): CategoriesConfig {
     defaults: {
       fallbackCategory: "unspecified-low",
       fallbackModel: {
-        provider: "ollama",
-        model: "qwen3.5:122b",
+        provider: "openai",
+        model: "gpt-5.3-codex",
       },
     },
   }
