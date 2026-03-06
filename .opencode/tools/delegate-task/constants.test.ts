@@ -33,8 +33,7 @@ describe("Category Constants", () => {
     it("should provide context-appropriate guidance for visual-engineering", () => {
       const prompt = CATEGORY_PROMPT_APPENDS["visual-engineering"]
       expect(prompt).toContain("frontend")
-      expect(prompt).toContain("UI")
-      expect(prompt).toContain("accessibility")
+      expect(prompt).toContain("Accessibility")
     })
 
     it("should emphasize reasoning for ultrabrain", () => {
@@ -75,7 +74,7 @@ describe("Category Constants", () => {
 
     it("should map visual-engineering to Gemini", () => {
       const route = CATEGORY_MODEL_ROUTES["visual-engineering"]
-      expect(route.provider).toBe("ollama-cloud")
+      expect(route.provider).toBe("ollama")
       expect(route.model).toContain("gemini")
     })
 

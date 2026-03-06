@@ -189,7 +189,7 @@ describe("Agent Resolution Integration", () => {
 
         expect(agent).not.toBeNull()
         expect(agent!.name).toBe("sisyphus")
-        expect(agent!.model).toBe("gpt-5.3-codex")  // Updated: Codex for ultrabrain tier
+        expect(agent!.model).toBe("claude-opus-4-6")  // Updated: Per AGENTS.md specification
         expect(agent!.mode).toBe("all")
         expect(agent!.category).toBe("unspecified-high")
       })
@@ -595,7 +595,7 @@ describe("Agent Resolution Integration", () => {
 
         expect(result).not.toBeNull()
         expect(result!.agent.name).toBe("sisyphus")
-        expect(result!.model).toBe("gpt-5.3-codex")  // Updated: Codex for ultrabrain tier
+        expect(result!.model).toBe("claude-opus-4-6")  // Updated: Per AGENTS.md specification
         expect(result!.source).toBe("agent-default")
       })
 
@@ -785,16 +785,16 @@ describe("Agent Resolution Integration", () => {
       const agent = getAgentByName("sisyphus")
 
       expect(agent!.fallbackChain.length).toBeGreaterThan(0)
-      // Updated: Codex tier uses GPT-5.2 fallback
-      expect(agent!.fallbackChain).toContain("gpt-5.2")
+      // Updated: AGENTS.md specifies 3 fallbacks for resilience
+      expect(agent!.fallbackChain).toContain("kimi-k2.5")
     })
 
     it("should have fallback chain for oracle", () => {
       const agent = getAgentByName("oracle")
 
       expect(agent!.fallbackChain.length).toBeGreaterThan(0)
-      // Updated: Codex tier uses GPT-5.2 fallback
-      expect(agent!.fallbackChain).toContain("gpt-5.2")
+      // Updated: AGENTS.md specifies gemini and claude fallbacks
+      expect(agent!.fallbackChain).toContain("gemini-3.1-pro")
     })
 
     it("should have empty fallback for sisyphus-junior", () => {
@@ -816,11 +816,11 @@ describe("Agent Resolution Integration", () => {
   // ============================================================
 
   describe("Resolution Priority", () => {
-    it("should prioritize user-override over agent default", () => {
+      it("should prioritize user-override over agent default", () => {
       // Agent default
       const agentDefault = resolveAgentModel({ agentName: "sisyphus" })
       expect(agentDefault!.source).toBe("agent-default")
-      expect(agentDefault!.model).toBe("gpt-5.3-codex")  // Updated: Codex for ultrabrain tier
+      expect(agentDefault!.model).toBe("claude-opus-4-6")  // Updated: Per AGENTS.md specification
 
       // User override
       const userOverride = resolveAgentModel({

@@ -79,20 +79,20 @@ export const PERMISSIONS = {
 
 export const FALLBACK_CHAINS = {
   // Ultrabrain tier: Codex with GPT-5.2 fallback
-  sisyphus: ["gpt-5.2"],
+  sisyphus: ["kimi-k2.5", "glm-5", "big-pickle"],
   hephaestus: ["gpt-5.2"],
-  oracle: ["gpt-5.2"],
-  momus: ["gpt-5.2"],
+  oracle: ["gemini-3.1-pro", "claude-opus-4-6"],
+  momus: ["claude-opus-4-6", "gemini-3.1-pro"],
 
-  // Medium tier: Ollama Cloud fallbacks
-  prometheus: ["qwen3-next:80b-cloud"],
-  metis: ["qwen3-next:80b-cloud"],
-  atlas: ["kimi-k2.5:cloud"],
-  librarian: ["kimi-k2.5:cloud"],
+  // Medium tier: Multi-model fallbacks
+  prometheus: ["kimi-k2.5", "gpt-5.2", "gemini-3.1-pro"],
+  metis: ["gpt-5.2", "kimi-k2.5", "gemini-3.1-pro"],
+  atlas: ["claude-sonnet-4-6", "gpt-5.2"],
+  librarian: ["gemini-3-flash", "gpt-5.2", "glm-4.6v"],
 
-  // Fast tier: Ollama Cloud fallbacks
-  explore: ["qwen3-coder-next:cloud"],
-  multimodalLooker: ["qwen3-vl:cloud"],
+  // Fast tier: Multi-model fallbacks
+  explore: ["minimax-m2.5", "claude-haiku-4-5", "gpt-5-nano"],
+  multimodalLooker: ["minimax-m2.5", "big-pickle"],
 
   // Inherited from category dispatch
   sisyphusJunior: [],
@@ -108,7 +108,7 @@ export const AGENT_REGISTRY: Record<string, AgentMetadata> = {
     displayName: "Sisyphus — Main Orchestrator",
     description: "Primary orchestrator that manages workflow, plans, delegates, and maintains session continuity. Named after the figure who rolls the boulder each day — representing daily engineering work.",
     category: "unspecified-high",
-    model: "gpt-5.3-codex",
+    model: "claude-opus-4-6",
     temperature: 0.1,
     mode: "all",
     permissions: PERMISSIONS.full,
@@ -147,7 +147,7 @@ export const AGENT_REGISTRY: Record<string, AgentMetadata> = {
     displayName: "Prometheus — Strategic Interview Planner",
     description: "Interview-mode planner that discovers requirements through Socratic questioning before planning begins.",
     category: "unspecified-high",
-    model: "qwen3-next:80b-cloud",
+    model: "claude-opus-4-6",
     temperature: 0.1,
     mode: "subagent",
     permissions: PERMISSIONS.readOnly,
@@ -160,7 +160,7 @@ export const AGENT_REGISTRY: Record<string, AgentMetadata> = {
     displayName: "Oracle — Architecture Consultant",
     description: "Read-only consultant for architecture decisions, debugging help, and multi-system tradeoffs. Provides consultation, never implementation.",
     category: "ultrabrain",
-    model: "gpt-5.3-codex",
+    model: "gpt-5.2",
     temperature: 0.1,
     mode: "subagent",
     permissions: PERMISSIONS.readOnly,
@@ -173,7 +173,7 @@ export const AGENT_REGISTRY: Record<string, AgentMetadata> = {
     displayName: "Metis — Pre-Planning Gap Analyzer",
     description: "Identifies hidden intentions, ambiguities, and AI failure points before planning. Uses higher temperature (0.3) for creative gap detection.",
     category: "artistry",
-    model: "qwen3-next:80b-cloud",
+    model: "claude-opus-4-6",
     temperature: 0.3, // Higher for creative gap detection
     mode: "subagent",
     permissions: PERMISSIONS.readOnly,
@@ -186,7 +186,7 @@ export const AGENT_REGISTRY: Record<string, AgentMetadata> = {
     displayName: "Momus — Plan Reviewer",
     description: "Ruthless plan reviewer that ensures plans are complete, verifiable, and actionable. Rejects vague plans.",
     category: "ultrabrain",
-    model: "gpt-5.3-codex",
+    model: "gpt-5.2",
     temperature: 0.1,
     mode: "subagent",
     permissions: PERMISSIONS.readOnly,
@@ -199,7 +199,7 @@ export const AGENT_REGISTRY: Record<string, AgentMetadata> = {
     displayName: "Sisyphus-Junior — Category Executor",
     description: "Focused executor spawned by category dispatch. Works autonomously within MUST DO / MUST NOT DO constraints. Cannot delegate further.",
     category: "unspecified-high", // Inherited from dispatch
-    model: "qwen3.5:cloud",
+    model: "claude-sonnet-4-6",
     temperature: 0.1,
     mode: "all",
     permissions: PERMISSIONS.fullNoTask,
@@ -225,7 +225,7 @@ export const AGENT_REGISTRY: Record<string, AgentMetadata> = {
     displayName: "Explore — Internal Codebase Grep",
     description: "Fast contextual grep for the internal codebase. Find files, extract patterns, discover implementations.",
     category: "deep",
-    model: "qwen3-coder-next:cloud",
+    model: "grok-code-fast-1",
     temperature: 0.1,
     mode: "subagent",
     permissions: PERMISSIONS.readOnly,
@@ -238,7 +238,7 @@ export const AGENT_REGISTRY: Record<string, AgentMetadata> = {
     displayName: "Multimodal-Looker — PDF/Image Analysis",
     description: "Analyzes PDFs, images, diagrams, and visual content requiring interpretation beyond text extraction.",
     category: "unspecified-low",
-    model: "qwen3-vl:cloud",
+    model: "gemini-3-flash",
     temperature: 0.1,
     mode: "subagent",
     permissions: PERMISSIONS.visionOnly,

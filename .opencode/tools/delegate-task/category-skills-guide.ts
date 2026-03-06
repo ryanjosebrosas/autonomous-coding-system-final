@@ -12,12 +12,12 @@ import { getSkillContentForPrompt, loadSkills, type Skill } from "../../features
 export const CATEGORY_SKILL_RECOMMENDATIONS: Record<string, string[]> = {
   "visual-engineering": ["frontend-ui-ux", "playwright"],
   "ultrabrain": ["council"],
-  "artistry": [],
+  "artistry": ["council"],
   "quick": ["git-master"],
   "deep": ["code-review"],
-  "unspecified-low": [],
-  "unspecified-high": [],
-  "writing": [],
+  "unspecified-low": ["git-master"],
+  "unspecified-high": ["code-review"],
+  "writing": ["planning-methodology"],
 }
 
 /**

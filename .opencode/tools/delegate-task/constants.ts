@@ -248,7 +248,7 @@ export const CATEGORY_MODEL_ROUTES: Record<string, {
 }> = {
   "visual-engineering": {
     provider: "ollama",
-    model: "gemini-3-flash-preview-cloud",
+    model: "gemini-3-flash-preview:latest",
     label: "GEMINI-3-FLASH"
   },
   "ultrabrain": {
@@ -258,7 +258,7 @@ export const CATEGORY_MODEL_ROUTES: Record<string, {
   },
   "artistry": {
     provider: "ollama",
-    model: "gemini-3-flash-preview-cloud",
+    model: "gemini-3-flash-preview:latest",
     label: "GEMINI-3-FLASH"
   },
   "quick": {

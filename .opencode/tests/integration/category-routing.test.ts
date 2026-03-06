@@ -42,7 +42,7 @@ describe("Category Routing Integration", () => {
           expect(result).not.toBeNull()
           expect(result!.category).toBe("visual-engineering")
           expect(result!.provider).toBe("ollama")
-          expect(result!.model).toBe("gemini-3-flash-preview-cloud")
+          expect(result!.model).toBe("gemini-3-flash-preview:latest")
           expect(result!.label).toBe("GEMINI-3-FLASH")
           expect(result!.source).toBe("category")
         })
@@ -60,7 +60,7 @@ describe("Category Routing Integration", () => {
           const result = resolveCategory("artistry")
           expect(result).not.toBeNull()
           expect(result!.provider).toBe("ollama")
-          expect(result!.model).toBe("gemini-3-flash-preview-cloud")
+          expect(result!.model).toBe("gemini-3-flash-preview:latest")
         })
 
         it("should resolve quick to GLM-4.7", () => {
@@ -163,9 +163,9 @@ describe("Category Routing Integration", () => {
 
     describe("All category model routes", () => {
       const categoryRoutes = [
-        { category: "visual-engineering", expectedProvider: "ollama", expectedModel: "gemini-3-flash-preview-cloud", expectedLabel: "GEMINI-3-FLASH" },
+        { category: "visual-engineering", expectedProvider: "ollama", expectedModel: "gemini-3-flash-preview:latest", expectedLabel: "GEMINI-3-FLASH" },
         { category: "ultrabrain", expectedProvider: "openai", expectedModel: "gpt-5.3-codex", expectedLabel: "GPT-5.3-CODEX" },
-        { category: "artistry", expectedProvider: "ollama", expectedModel: "gemini-3-flash-preview-cloud", expectedLabel: "GEMINI-3-FLASH" },
+        { category: "artistry", expectedProvider: "ollama", expectedModel: "gemini-3-flash-preview:latest", expectedLabel: "GEMINI-3-FLASH" },
         { category: "quick", expectedProvider: "ollama", expectedModel: "glm-4.7:cloud", expectedLabel: "GLM-4.7" },
         { category: "deep", expectedProvider: "ollama", expectedModel: "qwen3-coder-next:cloud", expectedLabel: "QWEN3-CODER-NEXT" },
         { category: "unspecified-low", expectedProvider: "ollama", expectedModel: "qwen3-coder-next:cloud", expectedLabel: "QWEN3-CODER-NEXT" },

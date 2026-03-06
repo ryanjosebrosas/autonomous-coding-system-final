@@ -14,7 +14,7 @@ describe("Category Selector", () => {
       const result = resolveCategory("visual-engineering")
       expect(result).not.toBeNull()
       expect(result!.category).toBe("visual-engineering")
-      expect(result!.provider).toBe("ollama-cloud")
+      expect(result!.provider).toBe("ollama")
       expect(result!.model).toContain("gemini")
       expect(result!.source).toBe("category")
     })
@@ -117,7 +117,7 @@ describe("Category Selector", () => {
     it("should return metadata for valid category", () => {
       const metadata = getCategoryMetadata("visual-engineering")
       expect(metadata).not.toBeNull()
-      expect(metadata!.provider).toBe("ollama-cloud")
+      expect(metadata!.provider).toBe("ollama")
       expect(metadata!.model).toContain("gemini")
       expect(metadata!.label).toBeDefined()
     })
