@@ -1,6 +1,6 @@
 ---
 description: Create a full Product Requirements Document with architecture, tech specs, and backend design
-model: openai/gpt-5.3-codex
+model: anthropic/claude-opus-4-5
 argument-hint: [output-filename]
 ---
 

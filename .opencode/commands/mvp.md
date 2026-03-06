@@ -1,6 +1,6 @@
 ---
 description: Define or refine the product MVP vision through interactive big-idea discovery
-model: openai/gpt-5.3-codex
+model: anthropic/claude-opus-4-5
 ---
 
 # MVP: Big Idea Discovery

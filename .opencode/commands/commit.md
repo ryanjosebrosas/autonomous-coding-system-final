@@ -1,6 +1,6 @@
 ---
 description: Create git commit with conventional message format
-model: ollama/glm-4.7:cloud
+model: ollama/glm-5
 ---
 
 # Commit: Create Git Commit

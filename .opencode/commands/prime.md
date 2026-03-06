@@ -1,6 +1,6 @@
 ---
 description: Prime agent with project context and auto-detect tech stack
-model: ollama/glm-4.7:cloud
+model: ollama/glm-5
 ---
 
 # Prime: Load Project Context + Stack Detection

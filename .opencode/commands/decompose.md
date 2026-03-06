@@ -1,6 +1,6 @@
 ---
 description: Deep-research one infrastructure pillar and produce a spec file for /planning
-model: openai/gpt-5.3-codex
+model: anthropic/claude-opus-4-5
 argument-hint: <pillar-name-or-number>
 ---
 
