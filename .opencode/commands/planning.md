@@ -1,6 +1,6 @@
 ---
 description: Interactive discovery session — explore ideas WITH the user, then produce a structured plan
-model: openai/gpt-5.3-codex
+model: anthropic/claude-opus-4-6
 ---
 
 # Planning: Interactive Discovery + Structured Plan

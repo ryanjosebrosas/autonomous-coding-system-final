@@ -9,38 +9,42 @@
   // AGENTS
   // ============================================================================
   // Override agent models or disable specific agents
+  //
+  // Model tier strategy:
+  //   Opus      → /planning command only (via command-model-router frontmatter)
+  //   Sonnet    → Sisyphus (main session), Metis
+  //   GPT-5.2   → Oracle, Momus (GPT excels at architecture reasoning + plan review)
+  //   GPT-Codex → Hephaestus (deep autonomous execution)
+  //   GLM-5     → Librarian, Explore, Atlas (cheap utility)
   "agents": {
+    // Main orchestrator: Sonnet for daily driving.
+    // Opus activates only when /planning is invoked (command-model-router hook).
     "sisyphus": {
-      "model": "claude-opus-4-5",
-      "provider": "anthropic"
+      "model": "anthropic/claude-sonnet-4-6"
     },
     "hephaestus": {
-      "model": "gpt-5.3-codex",
-      "provider": "openai"
+      "model": "openai/gpt-5.3-codex"
     },
+    // Architecture consultation: GPT-5.2 has strong reasoning for tradeoff analysis
     "oracle": {
-      "model": "claude-opus-4-5",
-      "provider": "anthropic"
+      "model": "openai/gpt-5.2"
     },
+    // Gap analysis: Sonnet is sufficient for pre-planning ambiguity detection
     "metis": {
-      "model": "claude-opus-4-5",
-      "provider": "anthropic"
+      "model": "anthropic/claude-sonnet-4-6"
     },
+    // Plan review: GPT-5.2 is ruthless and precise for validation
     "momus": {
-      "model": "claude-opus-4-5",
-      "provider": "anthropic"
+      "model": "openai/gpt-5.2"
     },
     "librarian": {
-      "model": "glm-5:cloud",
-      "provider": "ollama"
+      "model": "ollama/glm-5:cloud"
     },
     "explore": {
-      "model": "glm-5:cloud",
-      "provider": "ollama"
+      "model": "ollama/glm-5:cloud"
     },
     "atlas": {
-      "model": "glm-5:cloud",
-      "provider": "ollama"
+      "model": "ollama/glm-5:cloud"
     }
   },
 
