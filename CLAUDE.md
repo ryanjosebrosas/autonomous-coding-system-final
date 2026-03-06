@@ -7,24 +7,24 @@ This project uses a structured AI-assisted development workflow.
 
 ## Core Rules
 
-@.claude/sections/01_core_principles.md
+@.opencode/sections/01_core_principles.md
 
 ## PIV Loop
 
-@.claude/sections/02_piv_loop.md
+@.opencode/sections/02_piv_loop.md
 
 ## Context Engineering
 
-@.claude/sections/03_context_engineering.md
+@.opencode/sections/03_context_engineering.md
 
 ## Git Save Points
 
-@.claude/sections/04_git_save_points.md
+@.opencode/sections/04_git_save_points.md
 
 ## Decision Framework
 
-@.claude/sections/05_decision_framework.md
+@.opencode/sections/05_decision_framework.md
 
 ## Archon Integration
 
-@.claude/sections/06_archon_workflow.md
+@.opencode/sections/06_archon_workflow.md

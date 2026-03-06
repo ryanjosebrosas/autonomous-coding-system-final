@@ -1,6 +1,6 @@
 ---
 description: Create a full Product Requirements Document with architecture, tech specs, and backend design
-model: gpt-5.3-codex
+model: openai/gpt-5.3-codex
 argument-hint: [output-filename]
 ---
 

@@ -24,6 +24,7 @@ import {
   createDirectoryAgentsInjectorHook,
   createDirectoryReadmeInjectorHook,
   createCategorySkillReminderHook,
+  createCommandModelRouterHook,
 } from "../../hooks/index"
 
 import type { AvailableSkill } from "../../agents/dynamic-prompt-builder"
@@ -182,9 +183,14 @@ export function createSessionHooks(args: {
     ? safeHook("agent-usage-reminder", () => createAgentUsageReminderHook(ctx as PluginInput))
     : null
 
+  const commandModelRouter = isHookEnabled("command-model-router")
+    ? safeHook("command-model-router", () => createCommandModelRouterHook(ctx.directory))
+    : null
+
   return {
     sessionRecovery,
     agentUsageReminder,
+    commandModelRouter,
   }
 }
 
@@ -225,7 +231,7 @@ export function createToolGuardHooks(args: {
 /**
  * Create transform hooks (tier 4).
  */
-export function createTransformHooks(args: {
+export function createTransformHooks(_args: {
   ctx: HookContext
   pluginConfig: OhMyOpenCodeConfig
   isHookEnabled: (hookName: HookName) => boolean

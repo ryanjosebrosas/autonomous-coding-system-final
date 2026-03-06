@@ -842,23 +842,23 @@ Bad queries (too long):
 
 Proceed without it. Archon is an enhancement, not a requirement. Use local codebase exploration (Glob, Grep, Read) and WebFetch for documentation.
 
-## Execution Agent Integration (`.codex/` or Alternative)
+## Execution Agent Integration (`.opencode/` or Alternative)
 
 The execution agent is a **swappable slot**. Choose one:
 
 | Option | Location | Invoke |
 |--------|----------|--------|
-| **Codex CLI** (default) | `.codex/skills/execute/SKILL.md` | `codex /execute task.md` |
+| **Codex CLI** (default) | `.opencode/skills/execute/SKILL.md` | `codex /execute task.md` |
 | **Aider CLI** | Create `.aider/skills/execute/SKILL.md` | `aider --file task.md` |
 | **Gemini CLI** | Create skills for Gemini | `gemini execute task.md` |
 | **Manual** | None required | Read `task-N.md` → implement → `/code-review` |
 
 **Codex CLI skills** (if installed):
-- `.codex/skills/execute/SKILL.md` — Execute a task brief (invoke: "execute the task brief at...")
-- `.codex/skills/prime/SKILL.md` — Load project context (invoke: "prime me" or "load context")
-- `.codex/skills/commit/SKILL.md` — Create a conventional commit (invoke: "commit my changes")
-- `.codex/skills/code-review/SKILL.md` — Technical code review (invoke: "review my code" or "code review")
-- `.codex/skills/code-loop/SKILL.md` — Automated fix loop (invoke: "code loop" or "fix all review issues")
+- `.opencode/skills/execute/SKILL.md` — Execute a task brief (invoke: "execute the task brief at...")
+- `.opencode/skills/prime/SKILL.md` — Load project context (invoke: "prime me" or "load context")
+- `.opencode/skills/commit/SKILL.md` — Create a conventional commit (invoke: "commit my changes")
+- `.opencode/skills/code-review/SKILL.md` — Technical code review (invoke: "review my code" or "code review")
+- `.opencode/skills/code-loop/SKILL.md` — Automated fix loop (invoke: "code loop" or "fix all review issues")
 
 ---
 
@@ -957,11 +957,11 @@ Session 6:  /prime → /commit → /pr                               → END (bo
 - If a session crashes, the brief/phase wasn't marked `.done.md`, so the next session retries it
 - `/commit → /pr` runs in the same session when they are the final pipeline step. `/commit` writes a `ready-for-pr` handoff, but `/pr` runs immediately after (not in a separate session). If `/pr` fails, its failure handoff persists for the next `/prime` session.
 
-### Static Configuration (`.claude/`)
+### Static Configuration (`.opencode/`)
 System configuration and reusable assets:
-- `.claude/commands/` — Slash commands (manual pipeline)
-- `.claude/sections/` — Auto-loaded rules (always loaded)
-- `.claude/config.md` — Auto-detected project stack and validation commands
+- `.opencode/commands/` — Slash commands (manual pipeline)
+- `.opencode/sections/` — Auto-loaded rules (always loaded)
+- `.opencode/config.md` — Auto-detected project stack and validation commands
 
 ---
 

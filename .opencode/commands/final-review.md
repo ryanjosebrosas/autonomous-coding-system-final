@@ -1,6 +1,6 @@
 ---
 description: Final review gate — summarize all changes, verify acceptance criteria, get human approval before commit
-model: deepseek-v3.1:671b-cloud
+model: ollama/deepseek-v3.1:671b-cloud
 ---
 
 # Final Review: Pre-Commit Approval Gate

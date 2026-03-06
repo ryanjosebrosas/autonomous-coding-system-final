@@ -1,6 +1,6 @@
 ---
 description: Create feature branch, push, and open PR
-model: deepseek-v3.1:671b-cloud
+model: ollama/deepseek-v3.1:671b-cloud
 ---
 
 # PR: Create Branch and Pull Request
