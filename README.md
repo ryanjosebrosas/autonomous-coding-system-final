@@ -62,6 +62,25 @@ Typical feature rhythm:
 - Session N: `/prime` → `/code-loop {feature}` → end
 - Session N+1: `/prime` → `/commit` → `/pr` → end
 
+```mermaid
+flowchart LR
+    A[/prime] --> B[/mvp]
+    B --> C[/prd]
+    C --> D[/pillars]
+    D --> E[/decompose]
+    E --> F[/planning]
+    F --> G[/execute\ntask 1..N]
+    G --> H[/code-loop]
+    H --> I[/commit]
+    I --> J[/pr]
+
+    style A fill:#4A90D9,color:#fff
+    style F fill:#7B68EE,color:#fff
+    style G fill:#7B68EE,color:#fff
+    style H fill:#E8943A,color:#fff
+    style J fill:#27AE60,color:#fff
+```
+
 Session continuity is maintained by `.agents/context/next-command.md`.  
 Every command updates that handoff file when it completes. `/prime` reads it and tells you exactly what to do next.
 
@@ -85,6 +104,25 @@ The TypeScript state machine tracks the pipeline using these states:
 | `blocked` | Manual intervention required |
 
 These states are not cosmetic. They gate valid next actions and reduce guesswork in long feature cycles.
+
+```mermaid
+stateDiagram-v2
+    [*] --> awaiting-execution : /planning done
+    awaiting-execution --> executing-tasks : /execute starts
+    awaiting-execution --> executing-series : multi-phase /execute
+    executing-tasks --> awaiting-review : all briefs done
+    executing-series --> awaiting-review : all phases done
+    awaiting-review --> awaiting-fixes : review finds issues
+    awaiting-review --> ready-to-commit : review clean
+    awaiting-fixes --> awaiting-re-review : fixes applied
+    awaiting-re-review --> awaiting-fixes : still has issues
+    awaiting-re-review --> ready-to-commit : review clean
+    ready-to-commit --> ready-for-pr : /commit done
+    ready-for-pr --> pr-open : /pr done
+    pr-open --> [*]
+    awaiting-execution --> blocked : manual intervention
+    executing-tasks --> blocked : manual intervention
+```
 
 ---
 
@@ -239,6 +277,39 @@ Agents are registered in TypeScript with explicit model assignments and permissi
 
 Each agent is optimized for a specific job. Routing work to the right agent reduces token waste and improves output consistency. Explore and Librarian are cheap background agents — fire them in parallel for research. Oracle and Momus are expensive — use them for decisions, not grunt work.
 
+```mermaid
+graph TD
+    subgraph Orchestrators["🧠 Orchestrators"]
+        S[Sisyphus\nclaude-sonnet-4-6\nFull permissions]
+    end
+
+    subgraph Consultants["🔍 Consultants — Read-only"]
+        O[Oracle\nclaude-opus-4-6\nArchitecture]
+        M[Metis\nclaude-sonnet-4-6\nGap analysis]
+        MO[Momus\nclaude-opus-4-6\nPlan review]
+    end
+
+    subgraph Workers["⚙️ Workers — Full permissions"]
+        H[Hephaestus\ngpt-5.3-codex\nDeep tasks]
+        SJ[Sisyphus-Junior\ngpt-5.3-codex\nCategory dispatch]
+        AT[Atlas\nglm-5:cloud\nTodo tracking]
+    end
+
+    subgraph Research["🔎 Research — Read-only"]
+        EX[Explore\nglm-5:cloud\nInternal grep]
+        LB[Librarian\nglm-5:cloud\nExternal docs]
+        ML[Multimodal-Looker\ngemini-3-flash\nPDF / images]
+    end
+
+    S -->|consults| O
+    S -->|pre-planning| M
+    S -->|plan review| MO
+    S -->|category dispatch| SJ
+    S -->|hard tasks| H
+    S -->|research| EX
+    S -->|external docs| LB
+```
+
 ---
 
 ## Hook system
@@ -337,6 +408,19 @@ review.md     →  review.done.md      (findings addressed)
 ```
 
 If you see a file without `.done.md`, that stage is still in progress.
+
+```mermaid
+flowchart LR
+    P[plan.md] -->|all tasks done| PD[plan.done.md]
+    T["task-{N}.md"] -->|task implemented| TD["task-{N}.done.md"]
+    R[report.md] -->|committed| RD[report.done.md]
+    RV[review.md] -->|findings addressed| RVD[review.done.md]
+
+    style PD fill:#27AE60,color:#fff
+    style TD fill:#27AE60,color:#fff
+    style RD fill:#27AE60,color:#fff
+    style RVD fill:#27AE60,color:#fff
+```
 
 ---
 
@@ -498,40 +582,38 @@ The subagent is ephemeral — it exists only for that task. Skills are the knowl
 
 ### The full wiring diagram
 
-```text
-User runs: opencode run "/planning user-auth"
-                |
-                v
-OpenCode CLI starts session
-  - Reads AGENTS.md → injects as system prompt (Sisyphus identity + rules)
-  - Loads .opencode/commands/ → discovers all slash commands
-  - Loads .opencode/hooks/ → registers all lifecycle hooks
-  - Reads oh-my-opencode.jsonc → loads agent + category model overrides
-                |
-                v
-chat.message hook fires (command-model-router)
-  - Detects "/planning" in message
-  - Reads .opencode/commands/planning.md frontmatter
-  - Finds model: "anthropic/claude-opus-4-6"
-  - Overrides session model to claude-opus-4-6
-                |
-                v
-/planning command runs as claude-opus-4-6
-  - Follows the 7-phase workflow in planning.md
-  - During Phase 2 research, calls: task(subagent_type="explore", ...)
-      - OpenCode spawns subagent with glm-5:cloud (from oh-my-opencode.jsonc)
-      - explore agent searches codebase, returns findings
-  - During Phase 3, calls: task(subagent_type="metis", ...)
-      - OpenCode spawns subagent with claude-sonnet-4-6
-      - metis reviews plan for gaps
-  - Writes plan.md + task-N.md to .agents/features/user-auth/
-  - Writes next-command.md handoff
-                |
-                v
-pipeline-hook fires on next session start
-  - Reads next-command.md
-  - Emits system reminder: "Feature: user-auth | Status: awaiting-execution | Next: /execute"
+```mermaid
+sequenceDiagram
+    actor User
+    participant OC as OpenCode CLI
+    participant AGENTS as AGENTS.md
+    participant CMR as command-model-router<br/>(hook)
+    participant CMD as /planning command<br/>(claude-opus-4-6)
+    participant EX as explore subagent<br/>(glm-5:cloud)
+    participant MT as metis subagent<br/>(claude-sonnet-4-6)
+    participant FS as .agents/features/
+    participant PH as pipeline-hook
+
+    User->>OC: opencode run "/planning user-auth"
+    OC->>AGENTS: load → inject as system prompt
+    OC->>OC: discover .opencode/commands/, hooks/, oh-my-opencode.jsonc
+    OC->>CMR: chat.message fires
+    CMR->>CMD: read planning.md frontmatter → override model to claude-opus-4-6
+    CMD->>CMD: Phase 1-2: intent classification + discovery interview
+    CMD->>EX: task(subagent_type="explore") — search codebase
+    EX-->>CMD: findings returned
+    CMD->>MT: task(subagent_type="metis") — gap analysis
+    MT-->>CMD: gaps + risks returned
+    CMD->>CMD: Phase 5-7: decompose → preview → user approves
+    CMD->>FS: write plan.md + task-1.md … task-N.md
+    CMD->>FS: write next-command.md (status: awaiting-execution)
+    Note over User,PH: Next session starts
+    User->>OC: opencode run "/prime"
+    OC->>PH: session start fires
+    PH->>FS: reads next-command.md
+    PH-->>User: "Feature: user-auth | Status: awaiting-execution | Next: /execute"
 ```
+
 
 This is the complete loop. OpenCode is the runtime. AGENTS.md is the brain. Commands are the workflow specs. Hooks enforce discipline automatically. `oh-my-opencode.jsonc` routes each piece of work to the right model. The `.agents/` directory carries state between sessions.
 
