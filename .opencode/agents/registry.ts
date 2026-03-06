@@ -23,6 +23,7 @@ export interface AgentMetadata {
   permissions: AgentPermissions
   fallbackChain: readonly string[]
   deniedTools: string[]
+  archonEnabled?: boolean // Optional: enables Archon RAG search capabilities
 }
 
 export interface AgentPermissions {
@@ -218,6 +219,7 @@ export const AGENT_REGISTRY: Record<string, AgentMetadata> = {
     permissions: PERMISSIONS.readOnly,
     fallbackChain: FALLBACK_CHAINS.librarian,
     deniedTools: ["write", "edit", "task", "call_omo_agent"],
+    archonEnabled: true,
   },
 
   explore: {
@@ -231,6 +233,7 @@ export const AGENT_REGISTRY: Record<string, AgentMetadata> = {
     permissions: PERMISSIONS.readOnly,
     fallbackChain: FALLBACK_CHAINS.explore,
     deniedTools: ["write", "edit", "task", "call_omo_agent"],
+    archonEnabled: true,
   },
 
   "multimodal-looker": {

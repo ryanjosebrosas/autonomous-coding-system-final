@@ -176,11 +176,12 @@ const SUMMARIES: Record<string, AgentSummary> = {
   librarian: {
     name: "Librarian",
     category: "writing",
-    oneLiner: "External documentation and implementation examples search",
+    oneLiner: "External documentation via Archon RAG, then web search fallback",
     useWhen: [
       "Looking up library APIs",
       "Finding implementation examples",
       "Version compatibility questions",
+      "Searching indexed documentation (Archon RAG)",
     ],
     avoidWhen: [
       "Codebase exploration",
@@ -199,6 +200,7 @@ const SUMMARIES: Record<string, AgentSummary> = {
       "Finding implementations",
       "Discovering patterns",
       "Integration points",
+      "Finding code examples from indexed sources (Archon)",
     ],
     avoidWhen: [
       "External documentation",

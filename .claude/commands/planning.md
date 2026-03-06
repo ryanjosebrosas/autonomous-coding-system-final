@@ -83,7 +83,26 @@ After each major discovery, confirm:
 
 Once the direction is clear, delegate all retrieval to Haiku subagents. Run in parallel where possible.
 
-### 2a. Codebase research → delegate to `research-codebase` subagent (Haiku)
+### 2a. Archon RAG (if connected) — PRIMARY SOURCE
+
+Before any other research, check Archon RAG for indexed documentation:
+
+1. **Check available sources**: `rag_get_available_sources()` to see what's indexed
+2. **Search knowledge base**: `rag_search_knowledge_base(query="...", match_count=5)`
+   - Use 2-5 keyword queries, NOT long sentences
+   - Good: "JWT authentication Express"
+   - Bad: "how to implement JWT authentication in Express.js with refresh tokens"
+3. **Search code examples**: `rag_search_code_examples(query="...", match_count=3)`
+4. **Read full pages**: `rag_read_full_page(page_id="...")` for detailed content
+
+**Why Archon first**:
+- Already indexed = faster than web search
+- Curated sources = higher quality than random web results
+- Saves tokens = no need to fetch and parse web pages
+
+If Archon doesn't have relevant sources, fall back to web search via librarian.
+
+### 2b. Codebase research → delegate to `research-codebase` subagent (Haiku)
 
 Use the Agent tool to invoke the `research-codebase` subagent with a prompt covering:
 - Feature being built and key integration points to find
@@ -92,7 +111,7 @@ Use the Agent tool to invoke the `research-codebase` subagent with a prompt cove
 
 The subagent returns: file:line references, patterns found, gotchas, integration points.
 
-### 2b. Knowledge base (if Archon connected) → delegate to `archon-retrieval` subagent (Haiku)
+### 2c. Knowledge base (if Archon connected) → delegate to `archon-retrieval` subagent (Haiku)
 
 Use the Agent tool to invoke the `archon-retrieval` subagent with:
 - 2-5 keyword queries for the feature's key concepts
@@ -100,7 +119,7 @@ Use the Agent tool to invoke the `archon-retrieval` subagent with:
 
 The subagent returns: matched documentation excerpts and code examples with source references.
 
-### 2c. External docs (if needed) → delegate to `research-external` subagent (Haiku)
+### 2d. External docs (if needed) → delegate to `research-external` subagent (Haiku)
 
 Use the Agent tool to invoke the `research-external` subagent with:
 - Libraries/APIs involved and what specifically to look up
@@ -108,7 +127,7 @@ Use the Agent tool to invoke the `research-external` subagent with:
 
 The subagent returns: relevant docs, best practices, pitfalls.
 
-### 2d. Past plans → delegate to `planning-research` subagent (Haiku)
+### 2e. Past plans → delegate to `planning-research` subagent (Haiku)
 
 Use the Agent tool to invoke the `planning-research` subagent with:
 - Feature name and short description
@@ -116,7 +135,7 @@ Use the Agent tool to invoke the `planning-research` subagent with:
 
 The subagent returns: prior decisions, reusable patterns, lessons learned.
 
-### 2e. Synthesise findings:
+### 2f. Synthesise findings:
 
 Take all subagent outputs and summarise:
 - "Research found these patterns..." / "Past plan for {X} used this approach..."
