@@ -1,6 +1,6 @@
 ---
 description: Process to fix bugs found in manual/AI code review
-model: claude-sonnet-4-6
+model: deepseek-v3.1:671b-cloud
 ---
 
 # Code Review Fix: Fix Issues from Review

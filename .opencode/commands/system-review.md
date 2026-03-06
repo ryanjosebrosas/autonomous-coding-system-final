@@ -1,6 +1,6 @@
 ---
 description: Analyze implementation against plan with auto-diff, code-review integration, and memory suggestions
-model: claude-sonnet-4-6
+model: deepseek-v3.1:671b-cloud
 ---
 
 # System Review (Enhanced)

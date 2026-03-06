@@ -1,6 +1,6 @@
 ---
 description: Create a full Product Requirements Document with architecture, tech specs, and backend design
-model: claude-opus-4-6
+model: gpt-5.3-codex
 argument-hint: [output-filename]
 ---
 

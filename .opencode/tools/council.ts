@@ -14,16 +14,16 @@ const MAX_ARCHIVE_PER_RUN = 10
 // Model configurations - verified working
 const COUNCIL_MODELS = {
   quick: [
-    { provider: "zai-coding-plan", model: "glm-5", label: "GLM-5" },
-    { provider: "bailian-coding-plan-test", model: "qwen3-max-2026-01-23", label: "QWEN3-MAX" },
-    { provider: "ollama-cloud", model: "kimi-k2:1t", label: "KIMI-K2" },
+    { provider: "ollama", model: "glm-5", label: "GLM-5" },
+    { provider: "ollama", model: "qwen3-next:80b", label: "QWEN3-NEXT" },
+    { provider: "ollama", model: "kimi-k2.5", label: "KIMI-K2.5" },
   ],
   standard: [
-    { provider: "zai-coding-plan", model: "glm-5", label: "GLM-5" },
-    { provider: "zai-coding-plan", model: "glm-4.5", label: "GLM-4.5" },
-    { provider: "bailian-coding-plan-test", model: "qwen3-max-2026-01-23", label: "QWEN3-MAX" },
-    { provider: "bailian-coding-plan-test", model: "qwen3.5-plus", label: "QWEN3.5-PLUS" },
-    { provider: "ollama-cloud", model: "kimi-k2:1t", label: "KIMI-K2" },
+    { provider: "ollama", model: "glm-5", label: "GLM-5" },
+    { provider: "ollama", model: "glm-4.7", label: "GLM-4.7" },
+    { provider: "ollama", model: "qwen3-next:80b", label: "QWEN3-NEXT" },
+    { provider: "ollama", model: "kimi-k2.5", label: "KIMI-K2.5" },
+    { provider: "ollama", model: "deepseek-v3.2", label: "DEEPSEEK-V3.2" },
   ],
 }
 

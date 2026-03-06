@@ -27,12 +27,12 @@ describe("Category Selector", () => {
       expect(result!.model).toContain("codex")
     })
 
-    it("should resolve quick to Haiku", () => {
+    it("should resolve quick to GLM-4.7", () => {
       const result = resolveCategory("quick")
       expect(result).not.toBeNull()
       expect(result!.category).toBe("quick")
-      expect(result!.provider).toBe("anthropic")
-      expect(result!.model).toContain("haiku")
+      expect(result!.provider).toBe("ollama")
+      expect(result!.model).toContain("glm")
     })
 
     it("should return fallback for unknown category", () => {

@@ -14,29 +14,19 @@ const MODEL_SCORES_PATH = ".agents/specs/model-scores.json"
 // ============================================================================
 
 const BENCHMARK_MODELS: Array<{ provider: string; model: string; label: string }> = [
-  // bailian-coding-plan-test
-  { provider: "bailian-coding-plan-test", model: "qwen3.5-plus", label: "QWEN3.5-PLUS" },
-  { provider: "bailian-coding-plan-test", model: "qwen3-coder-plus", label: "QWEN3-CODER-PLUS" },
-  { provider: "bailian-coding-plan-test", model: "qwen3-coder-next", label: "QWEN3-CODER-NEXT" },
-  { provider: "bailian-coding-plan-test", model: "qwen3-max-2026-01-23", label: "QWEN3-MAX" },
-  { provider: "bailian-coding-plan-test", model: "kimi-k2.5", label: "KIMI-K2.5" },
-  { provider: "bailian-coding-plan-test", model: "minimax-m2.5", label: "MINIMAX-M2.5" },
-  // zai-coding-plan
-  { provider: "zai-coding-plan", model: "glm-5", label: "GLM-5" },
-  { provider: "zai-coding-plan", model: "glm-4.5", label: "GLM-4.5" },
-  { provider: "zai-coding-plan", model: "glm-4.7", label: "GLM-4.7" },
-  { provider: "zai-coding-plan", model: "glm-4.7-flash", label: "GLM-4.7-FLASH" },
-  { provider: "zai-coding-plan", model: "glm-4.7-flashx", label: "GLM-4.7-FLASHX" },
-  // ollama-cloud (excluding kimi-k2-thinking, cogito-2.1 — broken in agent mode)
-  { provider: "ollama-cloud", model: "deepseek-v3.2", label: "DEEPSEEK-V3.2" },
-  { provider: "ollama-cloud", model: "kimi-k2:1t", label: "KIMI-K2" },
-  { provider: "ollama-cloud", model: "deepseek-v3.1:671b", label: "DEEPSEEK-V3.1" },
-  { provider: "ollama-cloud", model: "devstral-2:123b", label: "DEVSTRAL-2" },
-  { provider: "ollama-cloud", model: "gemini-3-pro-preview", label: "GEMINI-3-PRO" },
-  { provider: "ollama-cloud", model: "gemini-3-flash-preview", label: "GEMINI-3-FLASH" },
-  { provider: "ollama-cloud", model: "mistral-large-3:675b", label: "MISTRAL-LARGE-3" },
-  { provider: "ollama-cloud", model: "qwen3-coder:480b", label: "QWEN3-CODER-480B" },
-  { provider: "ollama-cloud", model: "qwen3.5:397b", label: "QWEN3.5-397B" },
+  // ollama (all models available on Ollama Cloud)
+  { provider: "ollama", model: "qwen3.5:122b", label: "QWEN3.5-122B" },
+  { provider: "ollama", model: "qwen3-coder-next", label: "QWEN3-CODER-NEXT" },
+  { provider: "ollama", model: "qwen3-next:80b", label: "QWEN3-NEXT" },
+  { provider: "ollama", model: "kimi-k2.5", label: "KIMI-K2.5" },
+  { provider: "ollama", model: "minimax-m2.5", label: "MINIMAX-M2.5" },
+  { provider: "ollama", model: "glm-5", label: "GLM-5" },
+  { provider: "ollama", model: "glm-4.7", label: "GLM-4.7" },
+  { provider: "ollama", model: "glm-4.6", label: "GLM-4.6" },
+  { provider: "ollama", model: "deepseek-v3.2", label: "DEEPSEEK-V3.2" },
+  { provider: "ollama", model: "devstral-2:123b", label: "DEVSTRAL-2" },
+  { provider: "ollama", model: "gemini-3-flash-preview", label: "GEMINI-3-FLASH" },
+  { provider: "ollama", model: "cogito-2.1:671b", label: "COGITO-2.1" },
 ]
 
 // ============================================================================
@@ -377,7 +367,7 @@ export default tool({
       .optional()
       .describe(
         "Comma-separated list of 'provider/model' to benchmark. " +
-        "Example: 'zai-coding-plan/glm-5,ollama-cloud/deepseek-v3.2'. " +
+        "Example: 'ollama/glm-5,ollama/deepseek-v3.2'. " +
         "If omitted, benchmarks all ~20 free models.",
       ),
   },

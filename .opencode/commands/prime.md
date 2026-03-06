@@ -1,6 +1,6 @@
 ---
 description: Prime agent with project context and auto-detect tech stack
-model: claude-haiku-4-5-20251001
+model: glm-4.7:cloud
 ---
 
 # Prime: Load Project Context + Stack Detection

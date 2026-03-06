@@ -85,10 +85,10 @@ describe("Category Constants", () => {
       expect(route.model).toContain("codex")
     })
 
-    it("should map quick to Haiku", () => {
+    it("should map quick to GLM-4.7", () => {
       const route = CATEGORY_MODEL_ROUTES["quick"]
-      expect(route.provider).toBe("anthropic")
-      expect(route.model).toContain("haiku")
+      expect(route.provider).toBe("ollama")
+      expect(route.model).toContain("glm")
     })
   })
 })

@@ -611,13 +611,13 @@ describe("Agent Resolution Integration", () => {
       it("should use user override when provider/model specified", () => {
         const result = resolveAgentModel({
           agentName: "sisyphus",
-          provider: "anthropic",
-          model: "claude-sonnet-4-6"
+          provider: "ollama",
+          model: "deepseek-v3.1:671b-cloud"
         })
-        
+
         expect(result).not.toBeNull()
-        expect(result!.model).toBe("claude-sonnet-4-6")
-        expect(result!.provider).toBe("anthropic")
+        expect(result!.model).toBe("deepseek-v3.1:671b-cloud")
+        expect(result!.provider).toBe("ollama")
         expect(result!.source).toBe("user-override")
       })
 
@@ -825,11 +825,11 @@ describe("Agent Resolution Integration", () => {
       // User override
       const userOverride = resolveAgentModel({
         agentName: "sisyphus",
-        provider: "ollama-cloud",
-        model: "qwen3-max"
+        provider: "ollama",
+        model: "qwen3.5:122b"
       })
       expect(userOverride!.source).toBe("user-override")
-      expect(userOverride!.model).toBe("qwen3-max")  // Updated: matches user override
+      expect(userOverride!.model).toBe("qwen3.5:122b")  // Updated: matches user override
     })
 
     it("should use agent default when only agent specified", () => {

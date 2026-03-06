@@ -98,7 +98,7 @@ Suggested Action: {what could unblock this}
 | **Temperature** | 0.1 |
 | **Mode** | primary (respects UI selection) |
 | **Permissions** | full (can modify files) |
-| **Fallback Chain** | claude-sonnet-4-6 → gpt-5.2 |
+| **Fallback Chain** | deepseek-v3.1:671b-cloud → gpt-5.2 |
 
 ## Tools Available
 

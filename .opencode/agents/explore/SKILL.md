@@ -101,7 +101,7 @@ Query Received
 | **Temperature** | 0.1 |
 | **Mode** | subagent (own fallback chain) |
 | **Permissions** | read-only |
-| **Fallback Chain** | minimax-m2.5 → claude-haiku-4-5 → gpt-5-nano |
+| **Fallback Chain** | minimax-m2.5 → glm-4.7:cloud → gpt-5-nano |
 
 ## Tools Available
 

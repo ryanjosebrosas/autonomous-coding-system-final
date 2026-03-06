@@ -130,17 +130,17 @@ const TASK_ROUTES: Record<string, ModelRoute | CascadeRoute> = {
   "docstring-generation": { provider: "bailian-coding-plan-test", model: "minimax-m2.5", label: "MINIMAX-M2.5" },
   "changelog-generation": { provider: "bailian-coding-plan-test", model: "minimax-m2.5", label: "MINIMAX-M2.5" },
 
-  // ── T0: Planning (Cascade: CODEX → FREE → PAID) ──
-  // NOTE: ollama-cloud models (kimi-k2-thinking, cogito-2.1) removed — they output
+  // ── T0: Planning (Cascade: CODEX → FREE) ──
+  // NOTE: ollama models (kimi-k2-thinking, cogito-2.1) removed — they output
   // raw tool call tokens in agent mode instead of making actual tool calls.
   // Codex-first per user policy; qwen3-max and qwen3.5-plus confirmed working.
+  // Claude removed entirely per user request to avoid Anthropic subscription ban.
   "planning": {
     type: "cascade",
     models: [
       { provider: "openai", model: "gpt-5.3-codex", label: "GPT-5.3-CODEX" },
       { provider: "bailian-coding-plan-test", model: "qwen3-max-2026-01-23", label: "QWEN3-MAX" },
       { provider: "bailian-coding-plan-test", model: "qwen3.5-plus", label: "QWEN3.5-PLUS" },
-      { provider: "anthropic", model: "claude-opus-4-5", label: "CLAUDE-OPUS-4-5" },
     ],
   },
 
@@ -173,34 +173,34 @@ const TASK_ROUTES: Record<string, ModelRoute | CascadeRoute> = {
   "ultra-fast-check":     { provider: "zai-coding-plan", model: "glm-4.7-flashx", label: "GLM-4.7-FLASHX" },
 
   // ── T3: Second Validation (Ollama Cloud) ──
-  "second-validation":    { provider: "ollama-cloud", model: "deepseek-v3.2", label: "DEEPSEEK-V3.2" },
-  "deep-research":        { provider: "ollama-cloud", model: "deepseek-v3.2", label: "DEEPSEEK-V3.2" },
-  "independent-review":   { provider: "ollama-cloud", model: "deepseek-v3.2", label: "DEEPSEEK-V3.2" },
-  "architecture-review":  { provider: "ollama-cloud", model: "kimi-k2:1t", label: "KIMI-K2" },
-  "deep-code-review":     { provider: "ollama-cloud", model: "deepseek-v3.1:671b", label: "DEEPSEEK-V3.1" },
-  "reasoning-review":     { provider: "ollama-cloud", model: "cogito-2.1:671b", label: "COGITO-2.1" },
-  "test-review":          { provider: "ollama-cloud", model: "devstral-2:123b", label: "DEVSTRAL-2" },
-  "multi-review":         { provider: "ollama-cloud", model: "gemini-3-pro-preview", label: "GEMINI-3-PRO" },
-  "fast-second-opinion":  { provider: "ollama-cloud", model: "gemini-3-flash-preview", label: "GEMINI-3-FLASH" },
-  "heavy-codegen":        { provider: "ollama-cloud", model: "mistral-large-3:675b", label: "MISTRAL-LARGE-3" },
-  "big-code-review":      { provider: "ollama-cloud", model: "qwen3-coder:480b", label: "QWEN3-CODER-480B" },
-  "thinking-second":      { provider: "ollama-cloud", model: "kimi-k2-thinking", label: "KIMI-K2-THINKING" },
-  "plan-critique":        { provider: "ollama-cloud", model: "qwen3.5:397b", label: "QWEN3.5-397B" },
+  "second-validation":    { provider: "ollama", model: "deepseek-v3.2", label: "DEEPSEEK-V3.2" },
+  "deep-research":        { provider: "ollama", model: "deepseek-v3.2", label: "DEEPSEEK-V3.2" },
+  "independent-review":   { provider: "ollama", model: "deepseek-v3.2", label: "DEEPSEEK-V3.2" },
+  "architecture-review":  { provider: "ollama", model: "kimi-k2:1t", label: "KIMI-K2" },
+  "deep-code-review":     { provider: "ollama", model: "deepseek-v3.1:671b", label: "DEEPSEEK-V3.1" },
+  "reasoning-review":     { provider: "ollama", model: "cogito-2.1:671b", label: "COGITO-2.1" },
+  "test-review":          { provider: "ollama", model: "devstral-2:123b", label: "DEVSTRAL-2" },
+  "multi-review":         { provider: "ollama", model: "gemini-3-pro-preview", label: "GEMINI-3-PRO" },
+  "fast-second-opinion":  { provider: "ollama", model: "gemini-3-flash-preview", label: "GEMINI-3-FLASH" },
+  "heavy-codegen":        { provider: "ollama", model: "mistral-large-3:675b", label: "MISTRAL-LARGE-3" },
+  "big-code-review":      { provider: "ollama", model: "qwen3-coder:480b", label: "QWEN3-CODER-480B" },
+  "thinking-second":      { provider: "ollama", model: "kimi-k2-thinking", label: "KIMI-K2-THINKING" },
+  "plan-critique":        { provider: "ollama", model: "qwen3.5:397b", label: "QWEN3.5-397B" },
 
   // ── T4: Paid Review Gate ──
+  // NOTE: Replaced Claude with GPT-5.3-Codex per user request
   "codex-review":         { provider: "openai", model: "gpt-5.3-codex", label: "GPT-5.3-CODEX" },
   "codex-validation":     { provider: "openai", model: "gpt-5.3-codex", label: "GPT-5.3-CODEX" },
-  "sonnet-45-review":     { provider: "anthropic", model: "claude-sonnet-4-5", label: "CLAUDE-SONNET-4-5" },
-  "sonnet-46-review":     { provider: "anthropic", model: "claude-sonnet-4-6", label: "CLAUDE-SONNET-4-6" },
 
   // ── T5: Final Review ──
-  "final-review":         { provider: "anthropic", model: "claude-sonnet-4-6", label: "CLAUDE-SONNET-4-6" },
-  "critical-review":      { provider: "anthropic", model: "claude-sonnet-4-6", label: "CLAUDE-SONNET-4-6" },
+  // NOTE: Replaced Claude Sonnet with DeepSeek-V3.1 per user request
+  "final-review":         { provider: "ollama", model: "deepseek-v3.1:671b-cloud", label: "DEEPSEEK-V3.1" },
+  "critical-review":      { provider: "ollama", model: "deepseek-v3.1:671b-cloud", label: "DEEPSEEK-V3.1" },
 
-  // ── Haiku: Cheap text generation ──
-  "commit-message":       { provider: "anthropic", model: "claude-haiku-4-5", label: "CLAUDE-HAIKU-4-5" },
-  "pr-description":       { provider: "anthropic", model: "claude-haiku-4-5", label: "CLAUDE-HAIKU-4-5" },
-  "changelog":            { provider: "anthropic", model: "claude-haiku-4-5", label: "CLAUDE-HAIKU-4-5" },
+  // ── Quick Text Generation (no Claude) ──
+  "commit-message":       { provider: "ollama", model: "glm-4.7:cloud", label: "GLM-4.7" },
+  "pr-description":       { provider: "ollama", model: "glm-4.7:cloud", label: "GLM-4.7" },
+  "changelog":            { provider: "ollama", model: "glm-4.7:cloud", label: "GLM-4.7" },
 }
 
 // Fallback when primary provider 404s (from model-strategy.md line 22)
@@ -943,8 +943,8 @@ export default tool({
       .string()
       .optional()
       .describe(
-        "Explicit provider ID. Examples: 'bailian-coding-plan-test', " +
-        "'zai-coding-plan', 'ollama-cloud', 'anthropic', 'openai'. " +
+        "Explicit provider ID. Examples: 'ollama', " +
+        "'anthropic', 'openai'. " +
         "Must be paired with 'model'.",
       ),
 
@@ -952,8 +952,8 @@ export default tool({
       .string()
       .optional()
       .describe(
-        "Explicit model ID. Examples: 'qwen3.5-plus', 'glm-5', " +
-        "'deepseek-v3.2', 'kimi-k2:1t'. Must be paired with 'provider'.",
+        "Explicit model ID. Examples: 'qwen3.5:122b', 'glm-5', " +
+        "'deepseek-v3.2', 'kimi-k2.5'. Must be paired with 'provider'.",
       ),
 
     mode: tool.schema

@@ -53,7 +53,7 @@ export function resolveCategory(
     }
     return {
       category: "fallback",
-      provider: "zai-coding-plan",
+      provider: "ollama",
       model: "glm-4.7",
       label: "GLM-4.7 (fallback)",
       source: "fallback"

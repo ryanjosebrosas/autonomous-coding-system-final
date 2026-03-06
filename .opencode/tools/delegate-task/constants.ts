@@ -247,9 +247,9 @@ export const CATEGORY_MODEL_ROUTES: Record<string, {
   label: string
 }> = {
   "visual-engineering": {
-    provider: "ollama-cloud",
-    model: "gemini-3-pro-preview",
-    label: "GEMINI-3-PRO"
+    provider: "ollama",
+    model: "gemini-3-flash-preview-cloud",
+    label: "GEMINI-3-FLASH"
   },
   "ultrabrain": {
     provider: "openai",
@@ -257,33 +257,33 @@ export const CATEGORY_MODEL_ROUTES: Record<string, {
     label: "GPT-5.3-CODEX"
   },
   "artistry": {
-    provider: "ollama-cloud",
-    model: "gemini-3-pro-preview",
-    label: "GEMINI-3-PRO"
+    provider: "ollama",
+    model: "gemini-3-flash-preview-cloud",
+    label: "GEMINI-3-FLASH"
   },
   "quick": {
-    provider: "anthropic",
-    model: "claude-haiku-4-5-20251001",
-    label: "CLAUDE-HAIKU-4-5"
+    provider: "ollama",
+    model: "glm-4.7:cloud",
+    label: "GLM-4.7"
   },
   "deep": {
-    provider: "bailian-coding-plan-test",
-    model: "qwen3.5-plus",
-    label: "QWEN3.5-PLUS"
+    provider: "ollama",
+    model: "qwen3-coder-next:cloud",
+    label: "QWEN3-CODER-NEXT"
   },
   "unspecified-low": {
-    provider: "anthropic",
-    model: "claude-sonnet-4-6",
-    label: "CLAUDE-SONNET-4-6"
+    provider: "ollama",
+    model: "qwen3-coder-next:cloud",
+    label: "QWEN3-CODER-NEXT"
   },
   "unspecified-high": {
-    provider: "anthropic",
-    model: "claude-opus-4-6",
-    label: "CLAUDE-OPUS-4-6"
+    provider: "ollama",
+    model: "deepseek-v3.1:671b-cloud",
+    label: "DEEPSEEK-V3.1"
   },
   "writing": {
-    provider: "bailian-coding-plan-test",
-    model: "kimi-k2.5",
+    provider: "ollama",
+    model: "kimi-k2.5:cloud",
     label: "KIMI-K2.5"
   }
 }

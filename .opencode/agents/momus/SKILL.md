@@ -124,7 +124,7 @@ Plan Received
 | **Temperature** | 0.1 |
 | **Mode** | subagent (own fallback chain) |
 | **Permissions** | read-only |
-| **Fallback Chain** | claude-opus-4-6 → gemini-3.1-pro |
+| **Fallback Chain** | deepseek-v3.1:671b-cloud → gemini-3.1-pro |
 
 ## Tools Available
 

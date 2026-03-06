@@ -71,7 +71,7 @@ const BATCH_PATTERNS: Record<string, { models: ModelConfig[]; description: strin
       { provider: "zai-coding-plan", model: "glm-4.5", label: "GLM-4.5" },
       { provider: "bailian-coding-plan-test", model: "qwen3-coder-plus", label: "QWEN3-CODER-PLUS" },
       { provider: "zai-coding-plan", model: "glm-4.7-flash", label: "GLM-4.7-FLASH" },
-      { provider: "ollama-cloud", model: "deepseek-v3.2", label: "DEEPSEEK-V3.2" },
+      { provider: "ollama", model: "deepseek-v3.2", label: "DEEPSEEK-V3.2" },
     ],
   },
   "free-heavy-architecture": {
@@ -79,9 +79,9 @@ const BATCH_PATTERNS: Record<string, { models: ModelConfig[]; description: strin
     models: [
       { provider: "zai-coding-plan", model: "glm-4.5", label: "GLM-4.5" },
       { provider: "bailian-coding-plan-test", model: "qwen3-max-2026-01-23", label: "QWEN3-MAX" },
-      { provider: "ollama-cloud", model: "kimi-k2:1t", label: "KIMI-K2" },
-      { provider: "ollama-cloud", model: "deepseek-v3.1:671b", label: "DEEPSEEK-V3.1" },
-      { provider: "ollama-cloud", model: "cogito-2.1:671b", label: "COGITO-2.1" },
+      { provider: "ollama", model: "kimi-k2:1t", label: "KIMI-K2" },
+      { provider: "ollama", model: "deepseek-v3.1:671b", label: "DEEPSEEK-V3.1" },
+      { provider: "ollama", model: "cogito-2.1:671b", label: "COGITO-2.1" },
     ],
   },
   "free-security-audit": {
@@ -98,7 +98,7 @@ const BATCH_PATTERNS: Record<string, { models: ModelConfig[]; description: strin
       { provider: "zai-coding-plan", model: "glm-5", label: "GLM-5" },
       { provider: "zai-coding-plan", model: "glm-4.5", label: "GLM-4.5" },
       { provider: "bailian-coding-plan-test", model: "qwen3-max-2026-01-23", label: "QWEN3-MAX" },
-      { provider: "ollama-cloud", model: "deepseek-v3.2", label: "DEEPSEEK-V3.2" },
+      { provider: "ollama", model: "deepseek-v3.2", label: "DEEPSEEK-V3.2" },
     ],
   },
   "free-impl-validation": {
@@ -106,7 +106,7 @@ const BATCH_PATTERNS: Record<string, { models: ModelConfig[]; description: strin
     models: [
       { provider: "zai-coding-plan", model: "glm-5", label: "GLM-5" },
       { provider: "zai-coding-plan", model: "glm-4.7-flash", label: "GLM-4.7-FLASH" },
-      { provider: "ollama-cloud", model: "deepseek-v3.2", label: "DEEPSEEK-V3.2" },
+      { provider: "ollama", model: "deepseek-v3.2", label: "DEEPSEEK-V3.2" },
     ],
   },
   "free-regression-sweep": {
@@ -114,7 +114,7 @@ const BATCH_PATTERNS: Record<string, { models: ModelConfig[]; description: strin
     models: [
       { provider: "zai-coding-plan", model: "glm-4.7", label: "GLM-4.7" },
       { provider: "bailian-coding-plan-test", model: "qwen3-coder-plus", label: "QWEN3-CODER-PLUS" },
-      { provider: "ollama-cloud", model: "devstral-2:123b", label: "DEVSTRAL-2" },
+      { provider: "ollama", model: "devstral-2:123b", label: "DEVSTRAL-2" },
     ],
   },
   "multi-review": {
@@ -122,8 +122,8 @@ const BATCH_PATTERNS: Record<string, { models: ModelConfig[]; description: strin
     models: [
       { provider: "zai-coding-plan", model: "glm-5", label: "GLM-5" },
       { provider: "zai-coding-plan", model: "glm-4.5", label: "GLM-4.5" },
-      { provider: "ollama-cloud", model: "deepseek-v3.2", label: "DEEPSEEK-V3.2" },
-      { provider: "ollama-cloud", model: "kimi-k2-thinking", label: "KIMI-K2-THINKING" },
+      { provider: "ollama", model: "deepseek-v3.2", label: "DEEPSEEK-V3.2" },
+      { provider: "ollama", model: "kimi-k2-thinking", label: "KIMI-K2-THINKING" },
     ],
   },
   "plan-review": {
@@ -131,8 +131,8 @@ const BATCH_PATTERNS: Record<string, { models: ModelConfig[]; description: strin
     models: [
       { provider: "zai-coding-plan", model: "glm-5", label: "GLM-5" },
       { provider: "bailian-coding-plan-test", model: "qwen3-max-2026-01-23", label: "QWEN3-MAX" },
-      { provider: "ollama-cloud", model: "qwen3.5:397b", label: "QWEN3.5-397B" },
-      { provider: "ollama-cloud", model: "deepseek-v3.2", label: "DEEPSEEK-V3.2" },
+      { provider: "ollama", model: "qwen3.5:397b", label: "QWEN3.5-397B" },
+      { provider: "ollama", model: "deepseek-v3.2", label: "DEEPSEEK-V3.2" },
     ],
   },
   "pre-impl-scan": {
@@ -140,7 +140,7 @@ const BATCH_PATTERNS: Record<string, { models: ModelConfig[]; description: strin
     models: [
       { provider: "zai-coding-plan", model: "glm-4.7-flash", label: "GLM-4.7-FLASH" },
       { provider: "bailian-coding-plan-test", model: "qwen3-coder-next", label: "QWEN3-CODER-NEXT" },
-      { provider: "ollama-cloud", model: "deepseek-v3.2", label: "DEEPSEEK-V3.2" },
+      { provider: "ollama", model: "deepseek-v3.2", label: "DEEPSEEK-V3.2" },
     ],
   },
   "heavy-architecture": {
@@ -148,19 +148,20 @@ const BATCH_PATTERNS: Record<string, { models: ModelConfig[]; description: strin
     models: [
       { provider: "zai-coding-plan", model: "glm-4.5", label: "GLM-4.5" },
       { provider: "bailian-coding-plan-test", model: "qwen3-max-2026-01-23", label: "QWEN3-MAX" },
-      { provider: "ollama-cloud", model: "kimi-k2:1t", label: "KIMI-K2" },
-      { provider: "ollama-cloud", model: "deepseek-v3.1:671b", label: "DEEPSEEK-V3.1" },
-      { provider: "ollama-cloud", model: "cogito-2.1:671b", label: "COGITO-2.1" },
+      { provider: "ollama", model: "kimi-k2:1t", label: "KIMI-K2" },
+      { provider: "ollama", model: "deepseek-v3.1:671b", label: "DEEPSEEK-V3.1" },
+      { provider: "ollama", model: "cogito-2.1:671b", label: "COGITO-2.1" },
     ],
   },
 
   // T4 sign-off panel (PAID — use only when free gauntlet requires it)
+  // NOTE: Replaced Claude with DeepSeek/GPT models per user request
   "t4-sign-off": {
-    description: "⚠️ PAID: T4 review panel — codex + sonnet-4-5 + sonnet-4-6",
+    description: "⚠️ PAID: T4 review panel — codex + deepseek + qwen-max",
     models: [
       { provider: "openai", model: "gpt-5.3-codex", label: "GPT-5.3-CODEX" },
-      { provider: "anthropic", model: "claude-sonnet-4-5", label: "CLAUDE-SONNET-4-5" },
-      { provider: "anthropic", model: "claude-sonnet-4-6", label: "CLAUDE-SONNET-4-6" },
+      { provider: "ollama", model: "deepseek-v3.1:671b-cloud", label: "DEEPSEEK-V3.1" },
+      { provider: "ollama", model: "qwen3-max:80b-cloud", label: "QWEN3-MAX" },
     ],
   },
 }

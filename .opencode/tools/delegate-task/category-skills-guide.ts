@@ -47,9 +47,9 @@ export function buildCategorySkillsDelegationGuide(
   }
   
   const model = categoryRoute || {
-    provider: "anthropic",
-    model: "claude-sonnet-4-6",
-    label: "CLAUDE-SONNET-4-6"
+    provider: "ollama",
+    model: "qwen3-coder-next:cloud",
+    label: "QWEN3-CODER-NEXT"
   }
   
   // Get category prompt

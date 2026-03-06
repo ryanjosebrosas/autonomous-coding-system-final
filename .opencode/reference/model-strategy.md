@@ -10,16 +10,16 @@ Maximize free/cheap models. Anthropic is last resort only.
 
 | Tier | Role | Provider/Model | Cost | Used By |
 |------|------|----------------|------|---------|
-| T0 | Planning (codex-first) | `openai/gpt-5.3-codex` → `qwen3-max` → `qwen3.5-plus` → `claude-opus-4-5` | PAID→FREE→PAID | `/planning` dispatch |
-| T1 | Implementation | `bailian-coding-plan-test/qwen3.5-plus` (+ coder-next, coder-plus) | FREE | `/execute` dispatch |
-| T2 | First Validation | `zai-coding-plan/glm-5` | FREE | `/code-review`, `/code-loop` |
-| T3 | Second Validation | `ollama-cloud/deepseek-v3.2` | FREE | `/code-loop` second opinion |
+| T0 | Planning (codex-first) | `openai/gpt-5.3-codex` → `qwen3-next:80b` → `qwen3.5:122b` | PAID→FREE→FREE | `/planning` dispatch |
+| T1 | Implementation | `ollama/qwen3.5:122b` (+ qwen3-coder-next) | FREE | `/execute` dispatch |
+| T2 | First Validation | `ollama/glm-5` | FREE | `/code-review`, `/code-loop` |
+| T3 | Second Validation | `ollama/deepseek-v3.2` | FREE | `/code-loop` second opinion |
 | T4 | Code Review gate | `openai/gpt-5.3-codex` | PAID (cheap) | `/code-loop` near-final |
-| T5 | Final Review | `anthropic/claude-sonnet-4-6` | PAID (expensive) | `/final-review` last resort |
+| T5 | Final Review | `ollama/deepseek-v3.1:671b-cloud` | FREE (Ollama Cloud) | `/final-review` |
 
-**Orchestrator**: Claude Opus handles ONLY exploration, planning, orchestration, strategy.
-**Planning cascade**: `gpt-5.3-codex` (PAID) → `qwen3-max` (FREE) → `qwen3.5-plus` (FREE) → `claude-opus-4-5` (PAID). Codex-first per user policy — produces best quality 700-1000 line plans. ollama-cloud thinking models (kimi-k2-thinking, cogito-2.1) removed — they cannot make tool calls in agent mode.
-**Fallback**: If `bailian-coding-plan-test` 404s, use `zai-coding-plan/glm-4.7`.
+**Orchestrator**: Sisyphus (Claude Opus or equivalent) handles exploration, planning, orchestration, strategy.
+**Planning cascade**: `gpt-5.3-codex` (PAID) → `qwen3-next:80b` (FREE - Ollama Cloud) → `qwen3.5:122b` (FREE - Ollama Cloud). Codex-first per user policy. **Claude removed entirely** per user request to avoid Anthropic subscription ban. Ollama thinking models (kimi-k2-thinking, cogito-2.1) removed — they cannot make tool calls in agent mode.
+**Fallback**: If primary model fails, system falls back through the chain.
 **Push cadence**: Push after every spec commit — do not batch to `/ship`.
 
 ---
@@ -35,7 +35,7 @@ Tools: `.opencode/tools/dispatch.ts`, `.opencode/tools/batch-dispatch.ts`
 | T1c (complex) | complex-codegen, complex-fix, research, architecture, library-comparison, pattern-scan | qwen3.5-plus | FREE |
 | T1d (long-ctx) | docs-lookup, long-context-review | kimi-k2.5 | FREE |
 | T1e (prose) | docs-generation, docstring-generation, changelog-generation | minimax-m2.5 | FREE |
-| T0 (codex-first planning) | planning | gpt-5.3-codex → qwen3-max → qwen3.5-plus → claude-opus-4-5 | PAID→FREE→PAID |
+| T0 (codex-first planning) | planning | gpt-5.3-codex → qwen3-max → qwen3.5-plus | PAID→FREE |
 | T1f (reasoning) | deep-plan-review, complex-reasoning | qwen3-max-2026-01-23 | FREE |
 | T2a (thinking) | thinking-review, first-validation, code-review, security-review, plan-review, logic-review | glm-5 | FREE |
 | T2b (flagship) | architecture-audit, design-review | glm-4.5 | FREE |
@@ -47,32 +47,29 @@ Tools: `.opencode/tools/dispatch.ts`, `.opencode/tools/batch-dispatch.ts`
 | T3 (deep-review) | deep-code-review | deepseek-v3.1:671b | FREE |
 | T3 (reasoning) | reasoning-review | cogito-2.1:671b | FREE |
 | T3 (code) | test-review | devstral-2:123b | FREE |
-| T3 (multi) | multi-review | gemini-3-pro-preview | FREE |
+| T3 (multi) | multi-review | gemini-3-flash-preview | FREE |
 | T3 (fast) | fast-second-opinion | gemini-3-flash-preview | FREE |
 | T3 (heavy) | heavy-codegen | mistral-large-3:675b | FREE |
 | T3 (big-code) | big-code-review | qwen3-coder:480b | FREE |
 | T3 (thinking) | thinking-second | kimi-k2-thinking | FREE |
 | T3 (plan) | plan-critique | qwen3.5:397b | FREE |
 | T4 | codex-review, codex-validation | gpt-5.3-codex | PAID |
-| T4 | sonnet-45-review | claude-sonnet-4-5 | PAID |
-| T4 | sonnet-46-review | claude-sonnet-4-6 | PAID |
-| T4 | t4-sign-off (panel) | codex + sonnet-4-5 + sonnet-4-6 via batch-dispatch | PAID |
-| T5 | final-review, critical-review | claude-sonnet-4-6 | PAID |
-| Haiku | commit-message, pr-description, changelog | claude-haiku-4-5 | PAID (cheap) |
+| T4 | t4-sign-off (panel) | codex + deepseek-v3.1:671b + qwen3-max via batch-dispatch | PAID+FREE |
+| T5 | final-review, critical-review | deepseek-v3.1:671b-cloud | FREE (Ollama Cloud) |
+| Quick | commit-message, pr-description, changelog | glm-4.7:cloud | FREE (Ollama Cloud) |
 
 ---
 
-## Council Models (18 preferred across 4 providers)
+## Council Models (Free providers only)
 
 Tool: `.opencode/tools/council.ts`, Command: `.opencode/commands/council.md`
 
 | Provider | Models | Cost |
 |----------|--------|------|
-| anthropic | claude-sonnet-4 | PAID |
 | openai | gpt-5-codex | PAID |
-| bailian-coding-plan-test | qwen3.5-plus, qwen3-coder-plus, qwen3-max, kimi-k2.5, glm-5 | FREE |
-| zai-coding-plan | glm-5, glm-4.7, glm-4.5, glm-4.7-flash | FREE |
-| ollama-cloud | deepseek-v3.2, kimi-k2:1t, gemini-3-pro-preview, devstral-2:123b, mistral-large-3:675b, cogito-2.1:671b, kimi-k2-thinking | FREE |
+| ollama | qwen3.5:122b, qwen3-coder-next, qwen3-next:80b, kimi-k2.5, glm-5, glm-4.7, deepseek-v3.2, gemini-3-flash-preview, devstral-2:123b, minimax-m2.5, deepseek-v3.1:671b | FREE |
+
+**Note**: Anthropic/Claude removed from council per user request to avoid subscription ban.
 
 Default council size: 5 models (auto-selected for provider diversity).
 
@@ -103,14 +100,14 @@ Three TypeScript tools in `.opencode/tools/` enable multi-model orchestration vi
 
 **Agent mode permissions**: read, edit, bash, glob, grep, list, todoread, todowrite. Denies: task (no recursive dispatch), external_directory, webfetch, websearch.
 
-**Agent mode works with most providers.** OpenCode's native infrastructure gives providers the same capabilities: file read/write, grep, glob, bash, Archon MCP access. **Exception**: Some `ollama-cloud` models (kimi-k2-thinking, cogito-2.1) output raw tool call tokens as literal text instead of making actual tool calls — they CANNOT be used in agent or command mode. Confirmed working in agent mode: all `bailian-coding-plan-test` models, all `zai-coding-plan` models, `anthropic`, `openai`.
+**Agent mode works with most providers.** OpenCode's native infrastructure gives providers the same capabilities: file read/write, grep, glob, bash, Archon MCP access. **Exception**: Some `ollama` models (kimi-k2-thinking, cogito-2.1) output raw tool call tokens as literal text instead of making actual tool calls — they CANNOT be used in agent or command mode. Confirmed working in agent mode: all `bailian-coding-plan-test` models, all `zai-coding-plan` models, `openai`, `ollama`. **Note**: `anthropic` removed per user request.
 
 **Three dispatch modes:**
 | Mode | Tool Access | Providers | Use For |
 |------|------------|-----------|---------|
 | `text` (default) | None | All | Reviews, opinions, analysis |
-| `agent` | Full (native agent infrastructure) | Most (except some ollama-cloud thinking models) | Implementation tasks, codebase navigation |
-| `command` | Full (slash command execution) | Most (except some ollama-cloud thinking models) | Running /planning, /execute, /code-review, /commit |
+| `agent` | Full (native agent infrastructure) | Most (except some ollama thinking models) | Implementation tasks, codebase navigation |
+| `command` | Full (slash command execution) | Most (except some ollama thinking models) | Running /planning, /execute, /code-review, /commit |
 
 **Agent mode example (any provider):**
 ```

@@ -1,6 +1,6 @@
 ---
 description: Final review gate — summarize all changes, verify acceptance criteria, get human approval before commit
-model: claude-sonnet-4-6
+model: deepseek-v3.1:671b-cloud
 ---
 
 # Final Review: Pre-Commit Approval Gate

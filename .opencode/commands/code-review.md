@@ -1,6 +1,6 @@
 ---
 description: Technical code review for quality and bugs that runs pre-commit
-model: claude-sonnet-4-6
+model: deepseek-v3.1:671b-cloud
 ---
 
 # Code Review: Find Bugs, Security Issues, and Quality Problems

@@ -1,6 +1,6 @@
 ---
 description: Run a multi-perspective council discussion on the given topic
-model: claude-opus-4-6
+model: gpt-5.3-codex
 ---
 
 # Council

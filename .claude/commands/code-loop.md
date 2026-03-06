@@ -1,6 +1,6 @@
 ---
 description: Automated review → fix → review loop until clean
-model: claude-sonnet-4-6
+model: deepseek-v3.1:671b-cloud
 ---
 
 # Code Loop: Automated Fix Loop

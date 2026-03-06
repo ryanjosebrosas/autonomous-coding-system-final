@@ -116,7 +116,7 @@ Question Received
 | **Temperature** | 0.1 |
 | **Mode** | subagent (own fallback chain) |
 | **Permissions** | read-only |
-| **Fallback Chain** | gemini-3.1-pro → claude-opus-4-6 |
+| **Fallback Chain** | gemini-3.1-pro → deepseek-v3.1:671b-cloud |
 
 ## Tools Available
 

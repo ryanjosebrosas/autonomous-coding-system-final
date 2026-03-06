@@ -1,6 +1,6 @@
 ---
 description: Create git commit with conventional message format
-model: claude-haiku-4-5-20251001
+model: glm-4.7:cloud
 ---
 
 # Commit: Create Git Commit

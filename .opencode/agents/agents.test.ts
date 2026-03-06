@@ -85,11 +85,11 @@ describe("Agent Resolution", () => {
     it("should use user override when provided", () => {
       const result = resolveAgentModel({
         agentName: "sisyphus",
-        provider: "anthropic",
-        model: "claude-sonnet-4-6",
+        provider: "ollama",
+        model: "deepseek-v3.1:671b-cloud",
       })
       expect(result?.source).toBe("user-override")
-      expect(result?.model).toBe("claude-sonnet-4-6")
+      expect(result?.model).toBe("deepseek-v3.1:671b-cloud")
     })
 
     it("should use category default when specified", () => {

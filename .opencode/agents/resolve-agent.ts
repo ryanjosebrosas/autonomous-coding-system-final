@@ -91,7 +91,7 @@ export function resolveAgentModel(options: ResolutionOptions): ResolvedAgent | n
   return {
     agent: AGENT_REGISTRY["sisyphus-junior"],
     model: "glm-4.7",
-    provider: "zai-coding-plan",
+    provider: "ollama",
     source: "fallback",
   }
 }
@@ -114,16 +114,18 @@ function parseModelString(modelString: string): [string, string] {
 function inferProvider(model: string): string {
   if (model.includes("claude")) return "anthropic"
   if (model.includes("gpt") || model.includes("codex")) return "openai"
-  if (model.includes("gemini")) return "ollama-cloud"
-  if (model.includes("qwen")) return "bailian-coding-plan-test"
-  if (model.includes("glm")) return "zai-coding-plan"
-  if (model.includes("kimi")) return "bailian-coding-plan-test"
-  if (model.includes("deepseek")) return "ollama-cloud"
-  if (model.includes("kimi")) return "bailian-coding-plan-test"
+  if (model.includes("gemini")) return "ollama"
+  if (model.includes("qwen")) return "ollama"
+  if (model.includes("glm")) return "ollama"
+  if (model.includes("kimi")) return "ollama"
+  if (model.includes("deepseek")) return "ollama"
+  if (model.includes("devstral")) return "ollama"
+  if (model.includes("minimax")) return "ollama"
+  if (model.includes("cogito")) return "ollama"
   if (model.includes("grok")) return "xai"
   
   // Default fallback
-  return "zai-coding-plan"
+  return "ollama"
 }
 
 // ============================================================================

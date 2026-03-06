@@ -49,7 +49,7 @@ export function mergeCategoryConfigs(
     defaults: {
       fallbackCategory: userConfig.defaults?.fallbackCategory || defaultConfig.defaults?.fallbackCategory || "unspecified-low",
       fallbackModel: userConfig.defaults?.fallbackModel || defaultConfig.defaults?.fallbackModel || {
-        provider: "zai-coding-plan",
+        provider: "ollama",
         model: "glm-4.7",
       },
     },

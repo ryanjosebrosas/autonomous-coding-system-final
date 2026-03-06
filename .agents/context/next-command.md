@@ -1,13 +1,13 @@
 # Pipeline Handoff
 <!-- Auto-updated by pipeline commands. Read by /prime. Do not edit manually. -->
 
-- **Last Command**: /code-loop
+- **Last Command**: /commit
 - **Feature**: ohmyopencode-integration
-- **Next Command**: /commit
+- **Next Command**: /pr ohmyopencode-integration
 - **Task Progress**: 13/13 complete
-- **Timestamp**: 2026-03-06T10:30:00Z
-- **Status**: ready-to-commit
-- **Notes**: Code-loop clean exit. 622/622 integration tests pass. All 13 tasks complete. No Critical/Major issues.
+- **Timestamp**: 2026-03-06T10:35:00Z
+- **Status**: ready-for-pr
+- **Notes**: Committed and pushed to master. Commit: a397980. feat(ohmyopencode): integrate complete OhMyOpenCode package.
 
 ## Task Index
 
@@ -27,12 +27,35 @@
 | 12 | `task-12.done.md` | Create INTEGRATION.md | 1 created |
 | 13 | `task-13.done.md` | Update agent models to Ollama + Codex | 2 modified (registry.ts, agent-resolution.test.ts) |
 
-## Model Configuration (Ollama Cloud + Codex)
+## Model Configuration (Ollama - Cloud Models)
 
-| Agent Tier | Agents | Models |
-|------------|--------|--------|
-| **Codex** | sisyphus, hephaestus, oracle, momus | gpt-5.3-codex (paid) |
-| **Ollama Large** | prometheus, metis | qwen3-max |
-| **Ollama Medium** | atlas, sisyphus-junior, librarian | qwen3.5-plus |
-| **Ollama Fast** | explore | llama3.2 |
-| **Ollama Vision** | multimodal-looker | llava:13b |
+| Agent Tier | Agents | Models | Provider |
+|------------|--------|--------|----------|
+| **Codex (paid)** | sisyphus, hephaestus, oracle, momus | gpt-5.3-codex | openai |
+| **Ollama Cloud** | prometheus, metis | qwen3-next:cloud | ollama |
+| **Ollama Cloud** | atlas, sisyphus-junior, librarian | kimi-k2.5:cloud | ollama |
+| **Ollama Cloud** | explore | qwen3-coder-next:cloud | ollama |
+| **Ollama Cloud** | multimodal-looker | qwen3-vl:cloud | ollama |
+
+**Category Routing:**
+| Category | Model | Provider |
+|----------|-------|----------|
+| visual-engineering | gemini-3-flash-preview:latest | ollama |
+| ultrabrain | gpt-5.3-codex | openai |
+| artistry | gemini-3-flash-preview:latest | ollama |
+| quick | claude-haiku-4-5-20251001 | anthropic |
+| deep | qwen3-coder-next:cloud | ollama |
+| unspecified-low | claude-sonnet-4-6 | anthropic |
+| unspecified-high | claude-opus-4-6 | anthropic |
+| writing | kimi-k2.5:cloud | ollama |
+
+**Installed Ollama Cloud Models:**
+- qwen3.5:cloud
+- qwen3-coder-next:cloud
+- qwen3-next:80b-cloud
+- kimi-k2.5:cloud
+- glm-5:cloud
+- glm-4.7:cloud
+- minimax-m2.5:cloud
+- deepseek-v3.1:671b-cloud
+- gemini-3-flash-preview:latest
