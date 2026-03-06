@@ -107,21 +107,32 @@ These states are not cosmetic. They gate valid next actions and reduce guesswork
 
 ```mermaid
 stateDiagram-v2
-    [*] --> awaiting-execution : /planning done
-    awaiting-execution --> executing-tasks : /execute starts
-    awaiting-execution --> executing-series : multi-phase /execute
-    executing-tasks --> awaiting-review : all briefs done
-    executing-series --> awaiting-review : all phases done
-    awaiting-review --> awaiting-fixes : review finds issues
-    awaiting-review --> ready-to-commit : review clean
-    awaiting-fixes --> awaiting-re-review : fixes applied
-    awaiting-re-review --> awaiting-fixes : still has issues
-    awaiting-re-review --> ready-to-commit : review clean
-    ready-to-commit --> ready-for-pr : /commit done
-    ready-for-pr --> pr-open : /pr done
-    pr-open --> [*]
-    awaiting-execution --> blocked : manual intervention
-    executing-tasks --> blocked : manual intervention
+    state "awaiting-execution" as ae
+    state "executing-tasks" as et
+    state "executing-series" as es
+    state "awaiting-review" as ar
+    state "awaiting-fixes" as af
+    state "awaiting-re-review" as arr
+    state "ready-to-commit" as rtc
+    state "ready-for-pr" as rfp
+    state "pr-open" as po
+    state "blocked" as bl
+
+    [*] --> ae : /planning done
+    ae --> et : /execute starts
+    ae --> es : multi-phase /execute
+    et --> ar : all briefs done
+    es --> ar : all phases done
+    ar --> af : review finds issues
+    ar --> rtc : review clean
+    af --> arr : fixes applied
+    arr --> af : still has issues
+    arr --> rtc : review clean
+    rtc --> rfp : /commit done
+    rfp --> po : /pr done
+    po --> [*]
+    ae --> bl : manual intervention
+    et --> bl : manual intervention
 ```
 
 ---
