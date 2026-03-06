@@ -135,19 +135,19 @@ function inferProvider(model: string): string {
 /**
  * Check if an agent is available (has valid model configuration).
  */
-export function isAgentAvailable(agentName: AgentName): boolean {
-  const agent = AGENT_REGISTRY[agentName]
-  if (!agent) return false
+export function isAgentAvailable(agent: AgentMetadata | AgentName): boolean {
+  const agentData = typeof agent === 'string' ? AGENT_REGISTRY[agent] : agent
+  if (!agentData) return false
   
   // Check if model exists
-  return !!agent.model && agent.model.length > 0
+  return !!agentData.model && agentData.model.length > 0
 }
 
 /**
  * Get all available agents.
  */
 export function getAvailableAgents(): AgentMetadata[] {
-  return Object.values(AGENT_REGISTRY).filter(isAgentAvailable)
+  return Object.values(AGENT_REGISTRY).filter((agent): agent is AgentMetadata => isAgentAvailable(agent))
 }
 
 /**

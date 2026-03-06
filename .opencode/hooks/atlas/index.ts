@@ -8,16 +8,9 @@
  * Priority: CRITICAL - Part of continuation tier.
  */
 
-import type { AtlasHookOptions, SessionState } from "./types"
+import type { AtlasHookOptions, SessionState, PluginInput } from "./types"
 import { createAtlasEventHandler } from "./event-handler"
 import { HOOK_NAME } from "./hook-name"
-import { log } from "../../shared/logger"
-
-// Minimal interface for plugin compatibility
-interface PluginInput {
-  client: unknown
-  directory: string
-}
 
 /**
  * Create the Atlas hook.
@@ -51,7 +44,7 @@ export function createAtlasHook(ctx: PluginInput, options?: AtlasHookOptions) {
     },
     
     // Tool execute after handler (for file path cleanup)
-    "tool.execute.after": async (input: { tool: string; sessionID: string; callID: string }, output: { title: string; output: string }) => {
+    "tool.execute.after": async (input: { tool: string; sessionID: string; callID: string }, _output: { title: string; output: string }) => {
       pendingFilePaths.delete(input.callID)
     },
   }

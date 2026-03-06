@@ -1,4 +1,4 @@
-import { describe, it, expect } from "bun:test"
+import { describe, it, expect } from "vitest"
 import {
   CATEGORY_PROMPT_APPENDS,
   CATEGORY_MODEL_ROUTES,

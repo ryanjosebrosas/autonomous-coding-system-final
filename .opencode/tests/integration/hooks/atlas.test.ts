@@ -9,7 +9,7 @@
  * - Event handling (session.idle, session.error, session.deleted)
  */
 
-import { describe, it, expect, beforeEach, mock } from "bun:test"
+import { describe, it, expect, beforeEach } from "vitest"
 import { createAtlasHook, HOOK_NAME } from "../../../hooks/atlas"
 import { 
   readBoulderState, 

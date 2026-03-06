@@ -9,7 +9,8 @@
  * - Duplicate recovery prevention
  */
 
-import { describe, it, expect, beforeEach, mock } from "bun:test"
+import { describe, it, expect, beforeEach } from "vitest"
+import { vi } from "vitest"
 import { createSessionRecoveryHook, detectErrorType } from "../../../hooks/session-recovery"
 import type { SessionRecoveryHook, RecoveryErrorType, MessageInfo, SessionRecoveryOptions } from "../../../hooks/session-recovery/types"
 
@@ -27,35 +28,35 @@ function createMockContext(options: {
 } = {}): {
   client: {
     session: {
-      abort: ReturnType<typeof mock<() => Promise<void>>>
-      messages: ReturnType<typeof mock<() => Promise<{ data?: unknown[] }>>>
-      delete: ReturnType<typeof mock<() => Promise<void>>>
+      abort: (args: { path: { id: string } }) => Promise<void>
+      messages: (args: { path: { id: string }; query?: { directory: string } }) => Promise<{ data?: unknown[] }>
+      delete: (args: { path: { id: string } }) => Promise<void>
     }
     tui?: {
-      showToast?: ReturnType<typeof mock<() => Promise<void>>>
+      showToast?: (args: { body: { title: string; message: string; variant: string; duration: number } }) => Promise<void>
     }
   }
   directory: string
 } {
-  const abortMock = mock(async () => {
+  const abortMock = vi.fn(async () => {
     if (options.shouldAbort === false) {
       throw new Error("Abort failed")
     }
-  })
+  }) as (args: { path: { id: string } }) => Promise<void>
   
-  const messagesMock = mock(async () => ({ data: [] }))
+  const messagesMock = vi.fn(async () => ({ data: [] })) as (args: { path: { id: string }; query?: { directory: string } }) => Promise<{ data?: unknown[] }>
   
-  const deleteMock = mock(async () => {
+  const deleteMock = vi.fn(async () => {
     if (options.shouldDelete === false) {
       throw new Error("Delete failed")
     }
-  })
+  }) as (args: { path: { id: string } }) => Promise<void>
   
-  const showToastMock = mock(async () => {
+  const showToastMock = vi.fn(async () => {
     if (options.shouldToast === false) {
       throw new Error("Toast failed")
     }
-  })
+  }) as (args: { body: { title: string; message: string; variant: string; duration: number } }) => Promise<void>
 
   return {
     client: {
@@ -511,7 +512,10 @@ describe("Session-Recovery Hook Integration", () => {
         await hook.handleSessionRecovery(info)
         
         expect(mockCtx.client.tui?.showToast).toHaveBeenCalledTimes(1)
-        const toastArgs = mockCtx.client.tui?.showToast?.mock.calls[0][0]
+        const toastCalls = (mockCtx.client.tui?.showToast as ReturnType<typeof vi.fn> & { mock: { calls: unknown[] } })?.mock.calls as [[{ body: { title: string; message: string; variant: string; duration: number } }]] | undefined
+        expect(toastCalls).toBeDefined()
+        expect(toastCalls).toHaveLength(1)
+        const toastArgs = toastCalls![0][0]
         expect(toastArgs.body.title).toBe("Tool Crash Recovery")
         expect(toastArgs.body.message).toContain("Injecting cancelled tool results")
         expect(toastArgs.body.variant).toBe("warning")
@@ -526,7 +530,10 @@ describe("Session-Recovery Hook Integration", () => {
         
         await hook.handleSessionRecovery(info)
         
-        const toastArgs = mockCtx.client.tui?.showToast?.mock.calls[0][0]
+        const toastCalls = (mockCtx.client.tui?.showToast as ReturnType<typeof vi.fn> & { mock: { calls: unknown[] } })?.mock.calls as [[{ body: { title: string; message: string; variant: string; duration: number } }]] | undefined
+        expect(toastCalls).toBeDefined()
+        expect(toastCalls).toHaveLength(1)
+        const toastArgs = toastCalls![0][0]
         expect(toastArgs.body.title).toBe("Tool Recovery")
         expect(toastArgs.body.message).toContain("Recovering from unavailable tool call")
       })
@@ -540,7 +547,10 @@ describe("Session-Recovery Hook Integration", () => {
         
         await hook.handleSessionRecovery(info)
         
-        const toastArgs = mockCtx.client.tui?.showToast?.mock.calls[0][0]
+        const toastCalls = (mockCtx.client.tui?.showToast as ReturnType<typeof vi.fn> & { mock: { calls: unknown[] } })?.mock.calls as [[{ body: { title: string; message: string; variant: string; duration: number } }]] | undefined
+        expect(toastCalls).toBeDefined()
+        expect(toastCalls).toHaveLength(1)
+        const toastArgs = toastCalls![0][0]
         expect(toastArgs.body.title).toBe("Thinking Block Recovery")
         expect(toastArgs.body.message).toContain("Fixing message structure")
       })
@@ -554,7 +564,10 @@ describe("Session-Recovery Hook Integration", () => {
         
         await hook.handleSessionRecovery(info)
         
-        const toastArgs = mockCtx.client.tui?.showToast?.mock.calls[0][0]
+        const toastCalls = (mockCtx.client.tui?.showToast as ReturnType<typeof vi.fn> & { mock: { calls: unknown[] } })?.mock.calls as [[{ body: { title: string; message: string; variant: string; duration: number } }]] | undefined
+        expect(toastCalls).toBeDefined()
+        expect(toastCalls).toHaveLength(1)
+        const toastArgs = toastCalls![0][0]
         expect(toastArgs.body.title).toBe("Thinking Strip Recovery")
         expect(toastArgs.body.message).toContain("Stripping thinking blocks")
       })
@@ -568,7 +581,10 @@ describe("Session-Recovery Hook Integration", () => {
         
         await hook.handleSessionRecovery(info)
         
-        const toastArgs = mockCtx.client.tui?.showToast?.mock.calls[0][0]
+        const toastCalls = (mockCtx.client.tui?.showToast as ReturnType<typeof vi.fn> & { mock: { calls: unknown[] } })?.mock.calls as [[{ body: { title: string; message: string; variant: string; duration: number } }]] | undefined
+        expect(toastCalls).toBeDefined()
+        expect(toastCalls).toHaveLength(1)
+        const toastArgs = toastCalls![0][0]
         expect(toastArgs.body.duration).toBe(3000)
       })
     })
@@ -624,7 +640,7 @@ describe("Session-Recovery Hook Integration", () => {
       it("should call onAbortCallback after aborting", async () => {
         const mockCtx = createMockContext()
         const hook = createSessionRecoveryHook(mockCtx)
-        const abortCallback = mock(() => {})
+        const abortCallback = vi.fn(() => {})
         hook.setOnAbortCallback(abortCallback)
         
         const info = createMockMessageInfo({
@@ -640,7 +656,7 @@ describe("Session-Recovery Hook Integration", () => {
       it("should call onRecoveryCompleteCallback after recovery", async () => {
         const mockCtx = createMockContext()
         const hook = createSessionRecoveryHook(mockCtx)
-        const completeCallback = mock(() => {})
+        const completeCallback = vi.fn(() => {})
         hook.setOnRecoveryCompleteCallback(completeCallback)
         
         const info = createMockMessageInfo({
@@ -656,7 +672,7 @@ describe("Session-Recovery Hook Integration", () => {
       it("should call onRecoveryCompleteCallback even if abort fails", async () => {
         const mockCtx = createMockContext({ shouldAbort: false })
         const hook = createSessionRecoveryHook(mockCtx)
-        const completeCallback = mock(() => {})
+        const completeCallback = vi.fn(() => {})
         hook.setOnRecoveryCompleteCallback(completeCallback)
         
         const info = createMockMessageInfo({
@@ -688,9 +704,9 @@ describe("Session-Recovery Hook Integration", () => {
         const mockCtx = {
           client: {
             session: {
-              abort: mock(async () => {}),
-              messages: mock(async () => ({ data: [] })),
-              delete: mock(async () => {}),
+              abort: vi.fn(async () => {}),
+              messages: vi.fn(async () => ({ data: [] })),
+              delete: vi.fn(async () => {}),
             },
             tui: undefined,
           },
@@ -729,8 +745,8 @@ describe("Session-Recovery Hook Integration", () => {
       it("should allow callback replacement", () => {
         const mockCtx = createMockContext()
         const hook = createSessionRecoveryHook(mockCtx)
-        const callback1 = mock(() => {})
-        const callback2 = mock(() => {})
+        const callback1 = vi.fn(() => {})
+        const callback2 = vi.fn(() => {})
         
         hook.setOnAbortCallback(callback1)
         hook.setOnAbortCallback(callback2)
@@ -761,8 +777,8 @@ describe("Session-Recovery Hook Integration", () => {
       it("should allow callback replacement", () => {
         const mockCtx = createMockContext()
         const hook = createSessionRecoveryHook(mockCtx)
-        const callback1 = mock(() => {})
-        const callback2 = mock(() => {})
+        const callback1 = vi.fn(() => {})
+        const callback2 = vi.fn(() => {})
         
         hook.setOnRecoveryCompleteCallback(callback1)
         hook.setOnRecoveryCompleteCallback(callback2)
@@ -786,8 +802,8 @@ describe("Session-Recovery Hook Integration", () => {
   describe("Integration", () => {
     it("should handle full recovery flow for tool_result_missing", async () => {
       const mockCtx = createMockContext()
-      const abortCallback = mock(() => {})
-      const completeCallback = mock(() => {})
+      const abortCallback = vi.fn(() => {})
+      const completeCallback = vi.fn(() => {})
       
       const hook = createSessionRecoveryHook(mockCtx)
       hook.setOnAbortCallback(abortCallback)
@@ -830,8 +846,8 @@ describe("Session-Recovery Hook Integration", () => {
 
     it("should handle unsupported error type in flow", async () => {
       const mockCtx = createMockContext()
-      const abortCallback = mock(() => {})
-      const completeCallback = mock(() => {})
+      const abortCallback = vi.fn(() => {})
+      const completeCallback = vi.fn(() => {})
       
       const hook = createSessionRecoveryHook(mockCtx)
       hook.setOnAbortCallback(abortCallback)

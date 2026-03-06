@@ -6,7 +6,7 @@
 // These overlays adjust instructions to work better with Gemini's tendencies.
 //
 
-import type { AgentConfig } from "./types"
+import type { AgentConfig } from "../types"
 
 // ============================================================================
 // GEMINI ADJUSTMENTS

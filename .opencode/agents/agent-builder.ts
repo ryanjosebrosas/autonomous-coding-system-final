@@ -57,7 +57,7 @@ export function buildAgent(
   
   // Determine model and provider
   const model = options?.model || metadata.model
-  const provider = options?.provider || inferProvider(model)
+  // Provider inferred by resolveAgentModel when needed
   const temperature = options?.temperature ?? metadata.temperature
   const permissions = options?.permissions || getPermissionsForAgent(agentName)
   const instructions = options?.instructions || buildDefaultInstructions(agentName, metadata)
@@ -69,7 +69,7 @@ export function buildAgent(
     temperature,
     mode: metadata.mode,
     permissions,
-    fallbackChain: metadata.fallbackChain,
+    fallbackChain: [...metadata.fallbackChain],
   }
 }
 
@@ -91,7 +91,7 @@ export function createAgentFactory(agentName: AgentName): AgentFactoryWithMode {
       temperature: metadata.temperature,
       mode: metadata.mode,
       permissions: getPermissionsForAgent(agentName),
-      fallbackChain: metadata.fallbackChain,
+      fallbackChain: [...metadata.fallbackChain],
     }
   }
   
@@ -183,22 +183,6 @@ function getPermissionsForAgent(agentName: AgentName): AgentPermissions {
     grep: !denied.includes("grep"),
     task: !denied.includes("task"),
   }
-}
-
-function inferProvider(model: string): string {
-  if (model.includes("claude")) return "anthropic"
-  if (model.includes("gpt") || model.includes("codex")) return "openai"
-  if (model.includes("gemini")) return "ollama"
-  if (model.includes("qwen")) return "ollama"
-  if (model.includes("glm")) return "ollama"
-  if (model.includes("kimi")) return "ollama"
-  if (model.includes("deepseek")) return "ollama"
-  if (model.includes("devstral")) return "ollama"
-  if (model.includes("minimax")) return "ollama"
-  if (model.includes("cogito")) return "ollama"
-  if (model.includes("grok")) return "xai"
-  
-  return "ollama" // Default fallback
 }
 
 // ============================================================================

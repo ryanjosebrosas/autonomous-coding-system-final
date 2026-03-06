@@ -15,7 +15,7 @@
 // BASE TYPES
 // ============================================================================
 
-export type { HookName, HookTier, HookConfig, HookContext, HookResult, HookEventType, HookHandler, HookDefinition, HookRegistry } from "./base"
+export type { HookName, HookTier, HookConfig, HookContext, HookResult, HookEventType, HookHandler, HookDefinition, HookRegistry, PluginInput } from "./base"
 export { HOOK_TIER_ORDER, getHookTierOrder, createHookRegistry } from "./base"
 
 // ============================================================================
@@ -28,11 +28,11 @@ export type { TodoContinuationEnforcer, TodoContinuationEnforcerOptions, Session
 
 // Atlas - Boulder pusher for task orchestration
 export { createAtlasHook, readBoulderState, writeBoulderState, getPlanProgress, getNextPendingTask, createBoulderState } from "./atlas"
-export type { AtlasHookOptions, SessionState as AtlasSessionState, BoulderState, PlanProgress, TaskInfo } from "./atlas/types"
+export type { AtlasHookOptions, SessionState as AtlasSessionState, BoulderState, PlanProgress, TaskInfo, PluginInput as AtlasPluginInput } from "./atlas/types"
 
 // Session Recovery - Resume from errors
 export { createSessionRecoveryHook } from "./session-recovery"
-export type { SessionRecoveryHook, SessionRecoveryOptions, RecoveryErrorType } from "./session-recovery"
+export type { SessionRecoveryHook, SessionRecoveryOptions, RecoveryErrorType } from "./session-recovery/types"
 
 // Compaction Todo Preserver - Preserve todos during compaction
 export { createCompactionTodoPreserverHook } from "./compaction-todo-preserver"
@@ -80,4 +80,4 @@ export { createDirectoryReadmeInjectorHook } from "./directory-readme-injector"
 
 // Category Skill Reminder - Remind about category + skills
 export { createCategorySkillReminderHook } from "./category-skill-reminder"
-export type { AvailableSkill } from "./category-skill-reminder/hook"
+// Note: AvailableSkill type is now defined in agents/dynamic-prompt-builder.ts

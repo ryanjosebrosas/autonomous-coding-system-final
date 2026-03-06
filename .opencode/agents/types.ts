@@ -20,7 +20,7 @@ export interface AgentConfig {
   temperature: number
   mode: AgentMode
   permissions: AgentPermissions
-  fallbackChain?: string[]
+  fallbackChain?: readonly string[]
 }
 
 export interface AgentPermissions {

@@ -27,6 +27,15 @@ export interface BuiltPrompt {
   fullPrompt: string
 }
 
+/**
+ * Available skill information for category dispatch reminders.
+ */
+export interface AvailableSkill {
+  name: string
+  description: string
+  compatibility: string
+}
+
 // ============================================================================
 // AGENT SUMMARIES FOR PROMPTS
 // ============================================================================
@@ -170,7 +179,7 @@ export function buildAgentPrompt(context: AgentPromptContext): BuiltPrompt {
  */
 function buildSystemPrompt(agentName: AgentName, agent: AgentMetadata | null): string {
   if (!agent) {
-    return `You are ${agentName}, an AI agent. ${agent?.description || ''}`
+    return `You are ${agentName}, an AI agent.`
   }
   
   let systemPrompt = `You are ${agent.displayName}.\n\n`

@@ -3,17 +3,13 @@
 // ============================================================================
 
 import { readFileSync, existsSync } from "node:fs"
-import { join, dirname } from "node:path"
-import { fileURLToPath } from "node:url"
-import { validateCategoriesConfig, type CategoriesConfig } from "./category-schema"
+import { join } from "node:path"
+import { validateCategoriesConfig, type CategoriesConfig, type CategoryDefinition } from "./category-schema"
 import { mergeCategoryConfigs } from "../shared/merge-categories"
 
 /**
  * Paths to category configuration files.
  */
-const CONFIG_DIR = join(dirname(fileURLToPath(import.meta.url)), "..")
-
-const DEFAULT_CATEGORIES_PATH = join(CONFIG_DIR, "tools", "delegate-task", "constants.ts")
 const USER_CATEGORIES_PATH = "oh-my-opencode.jsonc"
 
 /**

@@ -6,6 +6,23 @@
  */
 
 /**
+ * Session recovery plugin input with required client methods.
+ */
+export interface SessionRecoveryPluginInput {
+  client: {
+    session: {
+      abort: (args: { path: { id: string } }) => Promise<void>
+      messages: (args: { path: { id: string }; query?: { directory: string } }) => Promise<{ data?: unknown[] }>
+      delete: (args: { path: { id: string } }) => Promise<void>
+    }
+    tui?: {
+      showToast?: (args: { body: { title: string; message: string; variant: string; duration: number } }) => Promise<void>
+    }
+  }
+  directory: string
+}
+
+/**
  * Types of recoverable errors.
  */
 export type RecoveryErrorType =

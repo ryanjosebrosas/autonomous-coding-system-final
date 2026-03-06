@@ -7,9 +7,7 @@
 
 import { log } from "../../shared/logger"
 
-interface PluginInput {
-  directory: string
-}
+// PluginInput is used in handler signature below
 
 interface PendingCall {
   filePath: string

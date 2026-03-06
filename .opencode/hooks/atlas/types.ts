@@ -6,6 +6,14 @@
  */
 
 /**
+ * Plugin input for hook initialization.
+ */
+export interface PluginInput {
+  client?: unknown
+  directory: string
+}
+
+/**
  * Model information for session tracking.
  */
 export type ModelInfo = { providerID: string; modelID: string }

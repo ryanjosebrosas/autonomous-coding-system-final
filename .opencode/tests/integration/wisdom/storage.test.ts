@@ -11,7 +11,7 @@
  * - Persistence across sessions
  */
 
-import { describe, it, expect, beforeEach, afterEach } from "bun:test"
+import { describe, it, expect, beforeEach, afterEach } from "vitest"
 import { rmSync, existsSync, writeFileSync, mkdirSync } from "node:fs"
 import { join } from "node:path"
 import {

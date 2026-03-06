@@ -10,7 +10,7 @@
  * - Confidence calculation
  */
 
-import { describe, it, expect } from "bun:test"
+import { describe, it, expect } from "vitest"
 import {
   extractFromReviewFinding,
   extractFromTestFailure,
@@ -863,7 +863,7 @@ describe("Wisdom Extractor Integration", () => {
 
         const items = extractFromReport(report)
 
-        expect(items[0].severity).toBe('unknown')
+        expect(String(items[0].severity)).toBe('unknown')
       })
 
       it("should handle large reports efficiently", () => {

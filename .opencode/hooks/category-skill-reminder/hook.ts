@@ -18,7 +18,9 @@ interface PluginInput {
  * Target agents that should receive category+skill reminders.
  * These are orchestrator agents that delegate work.
  */
-const TARGET_AGENTS = new Set([
+// Target agents that should receive category+skill reminders.
+// These are orchestrator agents that delegate work.
+const _TARGET_AGENTS = new Set([
   "sisyphus",
   "sisyphus-junior",
   "atlas",
@@ -82,13 +84,6 @@ interface EventInput {
     type: string
     properties?: unknown
   }
-}
-
-/**
- * Check if an agent is a target for reminders.
- */
-function isTargetAgent(agentName: string): boolean {
-  return TARGET_AGENTS.has(agentName.toLowerCase())
 }
 
 /**

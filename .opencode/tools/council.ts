@@ -401,7 +401,7 @@ function detectConflicts(
     [/\balways\s+use\b/i, /\bavoid\b|\bnever\s+use\b/i],
     [/\brecommend\b/i, /\bdon't\s+recommend\b|\bavoid\b/i],
     [/\bbest\s+practice\b/i, /\banti-?pattern\b|\bbad\s+practice\b/i],
-    [/\bprefer\s+(\w+)/i, /\bavoid\s+\1\b/i],
+    [/\bprefer\s+\w+/i, /\bavoid\s+\w+/i], // Prefer X vs Avoid Y (same concept)
     [/\buse\s+try[\s-]?catch\b/i, /\buse\s+\.catch\(\)\b/i], // Specific to error handling
   ]
   

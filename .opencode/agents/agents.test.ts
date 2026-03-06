@@ -2,10 +2,10 @@
 // AGENT TESTS
 // ============================================================================
 
-import { describe, it, expect } from "bun:test"
-import { AGENT_REGISTRY, getAgentByName, getAllAgentNames, getAgentsByMode, getAgentsByCategory } from "./registry"
-import { resolveAgentModel, isAgentAvailable, hasPermission, getDeniedTools } from "./resolve-agent"
-import { PERMISSION_PRESETS, getPermissionLevel, getPermissions, canUseTool } from "./permissions"
+import { describe, it, expect } from "vitest"
+import { getAgentByName, getAllAgentNames, getAgentsByMode, getAgentsByCategory } from "./registry"
+import { resolveAgentModel, isAgentAvailable, hasPermission } from "./resolve-agent"
+import { getPermissionLevel, getPermissions, canUseTool } from "./permissions"
 
 describe("Agent Registry", () => {
   describe("getAgentByName", () => {

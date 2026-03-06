@@ -2,22 +2,12 @@
  * Event handler for todo continuation enforcement.
  */
 
-import type { SessionStateStore, Todo } from "./types"
-import { HOOK_NAME, DEFAULT_SKIP_AGENTS, COUNTDOWN_DELAY_MS, CONTINUATION_INTERVAL_MS, INJECTION_COOLDOWN_MS } from "./constants"
+import type { SessionStateStore, Todo, TodoContinuationPluginInput } from "./types"
+import { HOOK_NAME, DEFAULT_SKIP_AGENTS, INJECTION_COOLDOWN_MS } from "./constants"
 import { log } from "../../shared/logger"
 
-interface PluginInput {
-  client: {
-    session: {
-      todo: (args: { path: { id: string } }) => Promise<{ data?: Todo[] }>
-      prompt: (args: { path: { id: string }; body: unknown }) => Promise<void>
-    }
-  }
-  directory: string
-}
-
 interface EventHandlerArgs {
-  ctx: PluginInput
+  ctx: TodoContinuationPluginInput
   sessionStateStore: SessionStateStore
   backgroundManager?: unknown
   skipAgents?: string[]
@@ -28,7 +18,7 @@ interface EventHandlerArgs {
  * Handle session.idle event - check for incomplete todos and inject reminder.
  */
 export async function handleSessionIdle(args: {
-  ctx: PluginInput
+  ctx: TodoContinuationPluginInput
   sessionID: string
   sessionStateStore: SessionStateStore
   backgroundManager?: unknown
@@ -72,7 +62,7 @@ export async function handleSessionIdle(args: {
 
     // Check for incomplete todos
     const incompleteTodos = todos.filter(
-      (t) => t.status === "pending" || t.status === "in_progress"
+      (t: Todo) => t.status === "pending" || t.status === "in_progress"
     )
 
     if (incompleteTodos.length === 0) {

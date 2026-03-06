@@ -147,7 +147,7 @@ export function createAgentUsageReminderHook(_ctx: PluginInput): {
  * Load agent usage state from storage.
  * Stub implementation - would use actual storage in production.
  */
-function loadAgentUsageState(sessionID: string): AgentUsageState | null {
+function loadAgentUsageState(_sessionID: string): AgentUsageState | null {
   // Stub - would load from file/DB
   return null
 }
@@ -156,7 +156,7 @@ function loadAgentUsageState(sessionID: string): AgentUsageState | null {
  * Save agent usage state to storage.
  * Stub implementation - would use actual storage in production.
  */
-function saveAgentUsageState(state: AgentUsageState): void {
+function saveAgentUsageState(_state: AgentUsageState): void {
   // Stub - would save to file/DB
 }
 
@@ -164,6 +164,6 @@ function saveAgentUsageState(state: AgentUsageState): void {
  * Clear agent usage state from storage.
  * Stub implementation - would use actual storage in production.
  */
-function clearAgentUsageState(sessionID: string): void {
+function clearAgentUsageState(_sessionID: string): void {
   // Stub - would delete from file/DB
 }

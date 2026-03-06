@@ -2,7 +2,7 @@
 // AVAILABLE AGENT SUMMARIES
 // ============================================================================
 
-import { AGENT_REGISTRY, type AgentMetadata } from "./registry"
+// Agent summaries are defined below without importing the registry
 
 // ============================================================================
 // AGENT SUMMARY INTERFACE

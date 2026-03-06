@@ -29,7 +29,7 @@ interface ToolExecuteOutput {
  */
 export function createDirectoryReadmeInjectorHook(
   ctx: PluginInput,
-  modelCacheState?: { anthropicContext1MEnabled: boolean }
+  _modelCacheState?: { anthropicContext1MEnabled: boolean }
 ): {
   "tool.execute.before": (input: ToolExecuteInput, output: { args: unknown }) => Promise<void>
   "tool.execute.after": (input: ToolExecuteInput, output: ToolExecuteOutput) => Promise<void>
@@ -99,7 +99,7 @@ export function createDirectoryReadmeInjectorHook(
     }
   }
 
-  const toolExecuteBefore = async (input: ToolExecuteInput, output: { args: unknown }): Promise<void> => {
+  const toolExecuteBefore = async (_input: ToolExecuteInput, _output: { args: unknown }): Promise<void> => {
     // No-op
   }
 

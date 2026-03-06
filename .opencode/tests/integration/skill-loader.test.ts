@@ -13,7 +13,7 @@
  * - buildCategorySkillPrompt(categoryPrompt: string, skillNames: string[])
  */
 
-import { describe, it, expect, beforeEach } from "bun:test"
+import { describe, it, expect, beforeEach } from "vitest"
 import { 
   discoverSkills, 
   loadSkill, 
@@ -479,7 +479,7 @@ describe("Skill Loader Integration", () => {
         ]
         
         for (const category of categories) {
-          const categoryPrompt = CATEGORY_PROMPT_APPENDS[category]
+          const categoryPrompt = CATEGORY_PROMPT_APPENDS[category as keyof typeof CATEGORY_PROMPT_APPENDS]
           const content = buildCategorySkillPrompt(categoryPrompt, ["prime"])
           
           expect(content).toContain("SKILL: prime")

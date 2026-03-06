@@ -9,7 +9,9 @@
  * 5. Skill hooks (skill-specific)
  */
 
-import type { HookName, HookTier } from "../base"
+import type { HookName, PluginInput } from "../../hooks/base"
+import type { TodoContinuationPluginInput } from "../../hooks/todo-continuation/types"
+import type { SessionRecoveryPluginInput } from "../../hooks/session-recovery/types"
 import {
   createTodoContinuationEnforcer,
   createAtlasHook,
@@ -22,7 +24,7 @@ import {
   createDirectoryAgentsInjectorHook,
   createDirectoryReadmeInjectorHook,
   createCategorySkillReminderHook,
-} from "../index"
+} from "../../hooks/index"
 
 import type { AvailableSkill } from "../../agents/dynamic-prompt-builder"
 import { log } from "../../shared/logger"
@@ -70,26 +72,12 @@ export interface ContinuationHooks {
 }
 
 /**
- * Check if a hook is enabled.
- */
-function isHookEnabled(
-  hookName: HookName,
-  pluginConfig: OhMyOpenCodeConfig,
-  defaultValue: boolean = true
-): boolean {
-  if (pluginConfig.hooks && hookName in pluginConfig.hooks) {
-    return pluginConfig.hooks[hookName] ?? defaultValue
-  }
-  return defaultValue
-}
-
-/**
  * Safe hook creation wrapper - catches errors during hook creation.
  */
 function safeHook<T>(
   hookName: HookName,
   factory: () => T,
-  options?: { enabled?: boolean }
+  _options?: { enabled?: boolean }
 ): T | null {
   try {
     return factory()
@@ -117,14 +105,14 @@ export function createContinuationHooks(args: {
   // Create todo continuation enforcer
   const todoContinuationEnforcer = isHookEnabled("todo-continuation-enforcer")
     ? safeHook("todo-continuation-enforcer", () =>
-        createTodoContinuationEnforcer(ctx, {
+        createTodoContinuationEnforcer(ctx as TodoContinuationPluginInput, {
           backgroundManager,
         }))
     : null
 
   // Create compaction todo preserver
   const compactionTodoPreserver = isHookEnabled("compaction-todo-preserver")
-    ? safeHook("compaction-todo-preserver", () => createCompactionTodoPreserverHook(ctx))
+    ? safeHook("compaction-todo-preserver", () => createCompactionTodoPreserverHook(ctx as PluginInput))
     : null
 
   // Create background notification hook
@@ -135,7 +123,7 @@ export function createContinuationHooks(args: {
   // Create atlas hook (boulder pusher)
   const atlasHook = isHookEnabled("atlas")
     ? safeHook("atlas", () =>
-        createAtlasHook(ctx, {
+        createAtlasHook(ctx as PluginInput, {
           directory: ctx.directory,
           backgroundManager,
           autoCommit: pluginConfig.start_work?.auto_commit,
@@ -187,7 +175,7 @@ export function createSessionHooks(args: {
   const { ctx, isHookEnabled } = args
 
   const sessionRecovery = isHookEnabled("session-recovery")
-    ? safeHook("session-recovery", () => createSessionRecoveryHook(ctx as PluginInput))
+    ? safeHook("session-recovery", () => createSessionRecoveryHook(ctx as SessionRecoveryPluginInput))
     : null
 
   const agentUsageReminder = isHookEnabled("agent-usage-reminder")
@@ -287,7 +275,7 @@ export function createCoreHooks(args: {
 
   // Create session recovery first (needed for continuation hooks)
   const sessionRecovery = isHookEnabled("session-recovery")
-    ? safeHook("session-recovery", () => createSessionRecoveryHook(ctx as PluginInput))
+    ? safeHook("session-recovery", () => createSessionRecoveryHook(ctx as SessionRecoveryPluginInput))
     : null
 
   const continuation = createContinuationHooks({
@@ -316,10 +304,4 @@ export function createCoreHooks(args: {
     transform,
     skill,
   }
-}
-
-// Minimal PluginInput type for type safety
-interface PluginInput {
-  client: unknown
-  directory: string
 }

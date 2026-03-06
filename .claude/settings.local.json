@@ -24,7 +24,8 @@
       "WebFetch(domain:raw.githubusercontent.com)",
       "Bash(gh api:*)",
       "Read(//c/Users/Utopia/.config/opencode/**)",
-      "Read(//c/Users/Utopia/**)"
+      "Read(//c/Users/Utopia/**)",
+      "Bash(do grep:*)"
     ]
   }
 }

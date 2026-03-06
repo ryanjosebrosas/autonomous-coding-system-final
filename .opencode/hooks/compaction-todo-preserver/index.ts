@@ -6,11 +6,15 @@
  */
 
 import type { Todo } from "../todo-continuation/types"
+import type { PluginInput as BasePluginInput } from "../base"
 import { log } from "../../shared/logger"
 
 const HOOK_NAME = "compaction-todo-preserver"
 
-interface PluginInput {
+/**
+ * Plugin input with required session.todo method.
+ */
+interface CompactionPreserverPluginInput {
   client: {
     session: {
       todo: (args: { path: { id: string } }) => Promise<{ data?: Todo[] }>
@@ -62,7 +66,12 @@ export interface CompactionTodoPreserver {
 /**
  * Create the compaction todo preserver hook.
  */
-export function createCompactionTodoPreserverHook(ctx: PluginInput): CompactionTodoPreserver {
+/**
+ * Create the compaction todo preserver hook.
+ */
+export function createCompactionTodoPreserverHook(ctx: BasePluginInput): CompactionTodoPreserver {
+  // Cast to required type - caller ensures client.session.todo exists
+  const pluginCtx = ctx as unknown as CompactionPreserverPluginInput
   const snapshots = new Map<string, Todo[]>()
 
   /**
@@ -72,7 +81,7 @@ export function createCompactionTodoPreserverHook(ctx: PluginInput): CompactionT
     if (!sessionID) return
 
     try {
-      const response = await ctx.client.session.todo({ path: { id: sessionID } })
+      const response = await pluginCtx.client.session.todo({ path: { id: sessionID } })
       const todos = extractTodos(response)
 
       if (todos.length === 0) return
@@ -96,7 +105,7 @@ export function createCompactionTodoPreserverHook(ctx: PluginInput): CompactionT
     let currentTodos: Todo[] = []
 
     try {
-      const response = await ctx.client.session.todo({ path: { id: sessionID } })
+      const response = await pluginCtx.client.session.todo({ path: { id: sessionID } })
       currentTodos = extractTodos(response)
       hasCurrent = true
     } catch (err) {

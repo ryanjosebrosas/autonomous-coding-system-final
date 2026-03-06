@@ -8,12 +8,13 @@
  * Priority: CRITICAL - Part of continuation tier, runs first.
  */
 
-import type { TodoContinuationEnforcer, TodoContinuationEnforcerOptions, SessionStateStore } from "./types"
+import type { TodoContinuationEnforcer, TodoContinuationEnforcerOptions, SessionStateStore, TodoContinuationPluginInput } from "./types"
 import { HOOK_NAME, DEFAULT_SKIP_AGENTS } from "./constants"
 import { createTodoContinuationHandler } from "./handler"
 import { createSessionStateStore } from "./session-state"
+import { log } from "../../shared/logger"
 
-export type { TodoContinuationEnforcer, TodoContinuationEnforcerOptions, SessionStateStore }
+export type { TodoContinuationEnforcer, TodoContinuationEnforcerOptions, SessionStateStore, TodoContinuationPluginInput }
 
 /**
  * Create the todo continuation enforcer hook.
@@ -23,7 +24,7 @@ export type { TodoContinuationEnforcer, TodoContinuationEnforcerOptions, Session
  * @returns Hook interface with handler and control methods
  */
 export function createTodoContinuationEnforcer(
-  ctx: unknown,
+  ctx: TodoContinuationPluginInput,
   options: TodoContinuationEnforcerOptions = {}
 ): TodoContinuationEnforcer {
   const {
@@ -78,5 +79,3 @@ export function createTodoContinuationEnforcer(
     cancelAllCountdowns,
   }
 }
-
-import { log } from "../../shared/logger"

@@ -48,7 +48,7 @@ const TRACKED_TOOLS = ["read", "write", "edit", "multiedit"]
  */
 export function createRulesInjectorHook(
   ctx: PluginInput,
-  modelCacheState?: { anthropicContext1MEnabled: boolean }
+  _modelCacheState?: { anthropicContext1MEnabled: boolean }
 ): {
   "tool.execute.before": (input: ToolExecuteInput, output: ToolExecuteBeforeOutput) => Promise<void>
   "tool.execute.after": (input: ToolExecuteInput, output: ToolExecuteOutput) => Promise<void>
@@ -153,8 +153,8 @@ export function createRulesInjectorHook(
    * Handle tool execution before.
    */
   const toolExecuteBefore = async (
-    input: ToolExecuteInput,
-    output: ToolExecuteBeforeOutput
+    _input: ToolExecuteInput,
+    _output: ToolExecuteBeforeOutput
   ): Promise<void> => {
     // No-op for before
   }

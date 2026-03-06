@@ -6,16 +6,13 @@
 // These are applied when building agent configs for non-Claude models.
 //
 
+import type { AgentConfig } from "../types"
+
+// Re-export overlay functions
 export {
   applyGeminiOverlay,
   applyGPTOverlay,
 } from "./gemini-overlays"
-
-// ============================================================================
-// OVERLAY APPLICATION
-// ============================================================================
-
-import type { AgentConfig } from "./types"
 
 /**
  * Apply appropriate overlay based on model family.
@@ -29,6 +26,7 @@ export function applyOverlayForModel(
   
   // Detect model family
   if (model.includes("gemini")) {
+    const { applyGeminiOverlay } = require("./gemini-overlays")
     return applyGeminiOverlay(agentName, config)
   }
   

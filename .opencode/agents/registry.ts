@@ -6,7 +6,7 @@
 // Each agent follows the AgentFactory pattern: createXXXAgent(model) → AgentConfig
 //
 
-import type { AgentMode, AgentConfig } from "./types"
+import type { AgentMode } from "./types"
 
 // ============================================================================
 // AGENT METADATA TYPES
@@ -21,7 +21,7 @@ export interface AgentMetadata {
   temperature: number
   mode: AgentMode
   permissions: AgentPermissions
-  fallbackChain: string[]
+  fallbackChain: readonly string[]
   deniedTools: string[]
 }
 

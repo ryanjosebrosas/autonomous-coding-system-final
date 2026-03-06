@@ -6,7 +6,7 @@
 
 import type { PluginInput, AtlasHookOptions, SessionState } from "./types"
 import { readBoulderState, getPlanProgress, getNextPendingTask } from "./boulder-state"
-import { HOOK_NAME, CONTINUATION_COOLDOWN_MS, FAILURE_BACKOFF_MS, ALLOWED_AGENTS } from "./constants"
+import { HOOK_NAME, CONTINUATION_COOLDOWN_MS, FAILURE_BACKOFF_MS } from "./constants"
 import { log } from "../../shared/logger"
 
 /**
@@ -182,7 +182,7 @@ async function injectBoulderContinuation(args: {
   nextTask: { id: string; title: string; status: string }
   agent?: string
 }): Promise<void> {
-  const { ctx, sessionID, planName, remaining, total, nextTask, agent } = args
+  const { planName, remaining, total, nextTask } = args
 
   // Build continuation message
   let message = `## <system-reminder>\n`
@@ -199,5 +199,5 @@ async function injectBoulderContinuation(args: {
   //   body: { content: message, noReply: true },
   // })
   
-  log(`[${HOOK_NAME}] Would inject continuation prompt`, { sessionID, message: message.substring(0, 100) })
+  log(`[${HOOK_NAME}] Would inject continuation prompt`, { message: message.substring(0, 100) })
 }

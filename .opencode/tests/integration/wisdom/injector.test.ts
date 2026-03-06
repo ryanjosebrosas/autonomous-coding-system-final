@@ -14,7 +14,7 @@
  * - Integration: Full flow from addWisdomItem → inject
  */
 
-import { describe, it, expect, beforeEach, afterEach } from "bun:test"
+import { describe, it, expect, beforeEach, afterEach } from "vitest"
 import { inject, buildInjectionBlock } from "../../../features/wisdom/injector"
 import { addWisdomItem, loadWisdom, saveWisdom, ensureWisdomDir } from "../../../features/wisdom/storage"
 import type { WisdomItem, WisdomFile } from "../../../features/wisdom/types"

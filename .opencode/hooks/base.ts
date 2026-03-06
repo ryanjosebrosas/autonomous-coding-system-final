@@ -6,6 +6,25 @@
  */
 
 /**
+ * Plugin input for hook initialization.
+ * Passed to all hooks during creation.
+ */
+export interface PluginInput {
+  client?: {
+    session?: {
+      abort?: (args: { path: { id: string } }) => unknown
+      messages?: (args: { path: { id: string }; query?: { directory: string } }) => unknown
+      delete?: (args: { path: { id: string } }) => unknown
+    }
+    tui?: {
+      showToast?: (args: { body: { title: string; message: string; variant: string; duration: number } }) => unknown
+    }
+  }
+  directory: string
+  [key: string]: unknown
+}
+
+/**
  * Hook name identifiers for all supported hooks.
  */
 export type HookName =
@@ -156,7 +175,7 @@ export function getHookTierOrder(tier: HookTier): number {
  */
 export interface HookRegistry {
   register(hook: HookDefinition): void
-  unregister(hookName: HookName): void
+  unregister(hookName: HookName | string): void
   getEnabledHooks(): HookDefinition[]
   getHooksByTier(tier: HookTier): HookDefinition[]
   getHooksForEvent(eventType: HookEventType): HookDefinition[]
@@ -172,8 +191,8 @@ export function createHookRegistry(): HookRegistry {
     hooks.set(hook.name, hook)
   }
 
-  function unregister(hookName: HookName): void {
-    hooks.delete(hookName)
+  function unregister(hookName: HookName | string): void {
+    hooks.delete(hookName as HookName)
   }
 
   function getEnabledHooks(): HookDefinition[] {

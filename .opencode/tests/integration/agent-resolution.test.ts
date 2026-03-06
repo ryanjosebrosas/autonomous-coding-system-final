@@ -10,7 +10,7 @@
  * - Resolution priority (user-override → agent-default → category → fallback)
  */
 
-import { describe, it, expect } from "bun:test"
+import { describe, it, expect } from "vitest"
 import {
   AGENT_REGISTRY,
   PERMISSIONS,

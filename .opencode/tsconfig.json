@@ -16,7 +16,7 @@
     "paths": {
       "@/*": ["./*"]
     },
-    "types": ["node"]
+    "types": ["node", "bun-types"]
   },
   "include": [
     "**/*.ts"

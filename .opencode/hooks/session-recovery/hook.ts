@@ -9,30 +9,16 @@
  * - thinking_disabled_violation: Strip thinking blocks
  */
 
-import type { SessionRecoveryHook, SessionRecoveryOptions, MessageInfo, RecoveryErrorType } from "./types"
+import type { SessionRecoveryHook, SessionRecoveryOptions, MessageInfo, RecoveryErrorType, SessionRecoveryPluginInput } from "./types"
 import { detectErrorType } from "./detect-error-type"
 import { log } from "../../shared/logger"
-
-interface PluginInput {
-  client: {
-    session: {
-      abort: (args: { path: { id: string } }) => Promise<void>
-      messages: (args: { path: { id: string }; query?: { directory: string } }) => Promise<{ data?: unknown[] }>
-      delete: (args: { path: { id: string } }) => Promise<void>
-    }
-    tui?: {
-      showToast?: (args: { body: { title: string; message: string; variant: string; duration: number } }) => Promise<void>
-    }
-  }
-  directory: string
-}
 
 /**
  * Create the session recovery hook.
  */
-export function createSessionRecoveryHook(ctx: PluginInput, options?: SessionRecoveryOptions): SessionRecoveryHook {
+export function createSessionRecoveryHook(ctx: SessionRecoveryPluginInput, _options?: SessionRecoveryOptions): SessionRecoveryHook {
   const processingErrors = new Set<string>()
-  const experimental = options?.experimental
+  // Experimental options not currently used
   let onAbortCallback: ((sessionID: string) => void) | null = null
   let onRecoveryCompleteCallback: ((sessionID: string) => void) | null = null
 
@@ -70,7 +56,9 @@ export function createSessionRecoveryHook(ctx: PluginInput, options?: SessionRec
       }
 
       // Abort current session
-      await ctx.client.session.abort({ path: { id: sessionID } }).catch(() => {})
+      if (ctx.client?.session?.abort) {
+        await ctx.client.session.abort({ path: { id: sessionID } }).catch(() => {})
+      }
 
       // Show toast notification
       const toastTitles: Record<RecoveryErrorType, string> = {
@@ -89,7 +77,7 @@ export function createSessionRecoveryHook(ctx: PluginInput, options?: SessionRec
         assistant_prefill_unsupported: "Prefill not supported; continuing without recovery.",
       }
 
-      await ctx.client.tui?.showToast?.({
+      await ctx.client?.tui?.showToast?.({
         body: {
           title: toastTitles[errorType],
           message: toastMessages[errorType],

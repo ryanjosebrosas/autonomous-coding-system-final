@@ -16,6 +16,19 @@ export interface Todo {
 }
 
 /**
+ * Todo continuation plugin input with required client methods.
+ */
+export interface TodoContinuationPluginInput {
+  client: {
+    session: {
+      todo: (args: { path: { id: string } }) => Promise<{ data?: Todo[] }>
+      prompt: (args: { path: { id: string }; body: unknown }) => Promise<void>
+    }
+  }
+  directory: string
+}
+
+/**
  * Session state for tracking countdown and continuation status.
  */
 export interface SessionState {
@@ -30,7 +43,7 @@ export interface SessionState {
 }
 
 /**
- * Options for creating the todo continuation enforcer.
+ * Todo Continuation Enforcer Options
  */
 export interface TodoContinuationEnforcerOptions {
   backgroundManager?: unknown

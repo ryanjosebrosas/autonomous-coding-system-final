@@ -8,7 +8,7 @@
  * - Event type filtering
  */
 
-import { describe, it, expect, beforeEach } from "bun:test"
+import { describe, it, expect, beforeEach } from "vitest"
 import {
   HOOK_TIER_ORDER,
   getHookTierOrder,
@@ -25,16 +25,20 @@ import {
 
 /**
  * Create a mock hook definition.
+ * 
+ * Note: Tests use arbitrary mock names (e.g., "hook1", "hook2") to test
+ * registry behavior, not specific hooks. We cast to HookName since the
+ * registry only needs the string type, not actual hook implementations.
  */
 function createMockHook(
-  name: HookName,
+  name: string,
   tier: HookTier,
   eventTypes: HookEventType[] = [],
   priority: number = 0,
   enabled: boolean = true
 ): HookDefinition {
   return {
-    name,
+    name: name as HookName,
     tier,
     description: `Mock hook: ${name}`,
     eventTypes,
@@ -42,6 +46,14 @@ function createMockHook(
     priority,
     handler: async () => ({ handled: true }),
   }
+}
+
+/**
+ * Helper to safely compare hook names in tests.
+ * Mock names are cast to HookName, so we compare as strings.
+ */
+function expectHookName(actual: HookName, expected: string): void {
+  expect(String(actual)).toBe(expected)
 }
 
 // ============================================================
@@ -155,7 +167,7 @@ describe("Hook Ordering Integration", () => {
       
       const hooks = registry.getEnabledHooks()
       expect(hooks.length).toBe(1)
-      expect(hooks[0].name).toBe("todo-continuation-enforcer")
+      expect(String(hooks[0].name)).toBe("todo-continuation-enforcer")
     })
 
     it("should register multiple hooks", () => {
@@ -231,9 +243,9 @@ describe("Hook Ordering Integration", () => {
       
       const hooks = registry.getEnabledHooks()
       expect(hooks.length).toBe(2)
-      expect(hooks.find(h => h.name === "hook1")).toBeDefined()
-      expect(hooks.find(h => h.name === "hook2")).toBeUndefined()
-      expect(hooks.find(h => h.name === "hook3")).toBeDefined()
+      expect(hooks.find(h => String(h.name) === "hook1")).toBeDefined()
+      expect(hooks.find(h => String(h.name) === "hook2")).toBeUndefined()
+      expect(hooks.find(h => String(h.name) === "hook3")).toBeDefined()
     })
 
     it("should allow re-registration after unregister", () => {
@@ -265,7 +277,7 @@ describe("Hook Ordering Integration", () => {
       
       const hooks = registry.getEnabledHooks()
       expect(hooks.length).toBe(1)
-      expect(hooks[0].name).toBe("enabled-hook")
+      expect(String(hooks[0].name)).toBe("enabled-hook")
     })
 
     it("should return hooks sorted by tier order", () => {
@@ -297,9 +309,9 @@ describe("Hook Ordering Integration", () => {
       
       const hooks = registry.getEnabledHooks()
       
-      expect(hooks[0].name).toBe("hook-high")
-      expect(hooks[1].name).toBe("hook-mid")
-      expect(hooks[2].name).toBe("hook-low")
+      expect(String(hooks[0].name)).toBe("hook-high")
+      expect(String(hooks[1].name)).toBe("hook-mid")
+      expect(String(hooks[2].name)).toBe("hook-low")
     })
 
     it("should sort by tier first, then by priority", () => {
@@ -315,10 +327,10 @@ describe("Hook Ordering Integration", () => {
       const hooks = registry.getEnabledHooks()
       
       // Continuation hooks first (tier 1)
-      expect(hooks[0].name).toBe("cont-high")
-      expect(hooks[1].name).toBe("cont-low")
+      expect(String(hooks[0].name)).toBe("cont-high")
+      expect(String(hooks[1].name)).toBe("cont-low")
       // Session hooks after (tier 2)
-      expect(hooks[2].name).toBe("session-high")
+      expect(String(hooks[2].name)).toBe("session-high")
     })
 
     it("should return new array each time (immutable)", () => {
@@ -365,9 +377,9 @@ describe("Hook Ordering Integration", () => {
       
       const continuationHooks = registry.getHooksByTier("continuation")
       
-      expect(continuationHooks[0].name).toBe("high")
-      expect(continuationHooks[1].name).toBe("mid")
-      expect(continuationHooks[2].name).toBe("low")
+      expect(String(continuationHooks[0].name)).toBe("high")
+      expect(String(continuationHooks[1].name)).toBe("mid")
+      expect(String(continuationHooks[2].name)).toBe("low")
     })
 
     it("should only return enabled hooks", () => {
@@ -379,7 +391,7 @@ describe("Hook Ordering Integration", () => {
       const continuationHooks = registry.getHooksByTier("continuation")
       
       expect(continuationHooks.length).toBe(1)
-      expect(continuationHooks[0].name).toBe("enabled")
+      expect(String(continuationHooks[0].name)).toBe("enabled")
     })
 
     it("should work for all tier types", () => {
@@ -418,9 +430,9 @@ describe("Hook Ordering Integration", () => {
       const idleHooks = registry.getHooksForEvent("session.idle")
       
       expect(idleHooks.length).toBe(2)
-      expect(idleHooks.find(h => h.name === "idle-hook")).toBeDefined()
-      expect(idleHooks.find(h => h.name === "both-hook")).toBeDefined()
-      expect(idleHooks.find(h => h.name === "error-hook")).toBeUndefined()
+      expect(idleHooks.find(h => String(h.name) === "idle-hook")).toBeDefined()
+      expect(idleHooks.find(h => String(h.name) === "both-hook")).toBeDefined()
+      expect(idleHooks.find(h => String(h.name) === "error-hook")).toBeUndefined()
     })
 
     it("should return hooks sorted by tier order", () => {
@@ -447,7 +459,7 @@ describe("Hook Ordering Integration", () => {
       const hooks = registry.getHooksForEvent("session.idle")
       
       expect(hooks.length).toBe(1)
-      expect(hooks[0].name).toBe("enabled")
+      expect(String(hooks[0].name)).toBe("enabled")
     })
 
     it("should handle hooks with multiple event types", () => {
@@ -519,9 +531,9 @@ describe("Hook Ordering Integration", () => {
       expect(continuationHooks.length).toBe(3)
       
       // The todo-enforcer should come AFTER atlas due to higher priority
-      expect(continuationHooks[0].name).toBe("atlas")
-      expect(continuationHooks[1].name).toBe("session-recovery")
-      expect(continuationHooks[2].name).toBe("todo-enforcer")
+      expect(String(continuationHooks[0].name)).toBe("atlas")
+      expect(String(continuationHooks[1].name)).toBe("session-recovery")
+      expect(String(continuationHooks[2].name)).toBe("todo-enforcer")
       
       // Get by event
       const idleHooks = registry.getHooksForEvent("session.idle")
@@ -541,30 +553,30 @@ describe("Hook Ordering Integration", () => {
       registry.register(createMockHook("b", "session", [], 1))
       
       let hooks = registry.getEnabledHooks()
-      expect(hooks[0].name).toBe("c") // continuation (tier 1)
-      expect(hooks[1].name).toBe("b") // session (tier 2)
-      expect(hooks[2].name).toBe("a") // skill (tier 5)
+      expect(String(hooks[0].name)).toBe("c") // continuation (tier 1)
+      expect(String(hooks[1].name)).toBe("b") // session (tier 2)
+      expect(String(hooks[2].name)).toBe("a") // skill (tier 5)
       
       // Add more hooks
       registry.register(createMockHook("d", "tool-guard", [], 1))
       registry.register(createMockHook("e", "transform", [], 1))
       
       hooks = registry.getEnabledHooks()
-      expect(hooks[0].name).toBe("c") // continuation
-      expect(hooks[1].name).toBe("b") // session
-      expect(hooks[2].name).toBe("d") // tool-guard
-      expect(hooks[3].name).toBe("e") // transform
-      expect(hooks[4].name).toBe("a") // skill
+      expect(String(hooks[0].name)).toBe("c") // continuation
+      expect(String(hooks[1].name)).toBe("b") // session
+      expect(String(hooks[2].name)).toBe("d") // tool-guard
+      expect(String(hooks[3].name)).toBe("e") // transform
+      expect(String(hooks[4].name)).toBe("a") // skill
       
       // Unregister middle hook
       registry.unregister("b")
       
       hooks = registry.getEnabledHooks()
       expect(hooks.length).toBe(4)
-      expect(hooks[0].name).toBe("c")
-      expect(hooks[1].name).toBe("d")
-      expect(hooks[2].name).toBe("e")
-      expect(hooks[3].name).toBe("a")
+      expect(String(hooks[0].name)).toBe("c")
+      expect(String(hooks[1].name)).toBe("d")
+      expect(String(hooks[2].name)).toBe("e")
+      expect(String(hooks[3].name)).toBe("a")
     })
 
     it("should handle priority ties within tiers", () => {
@@ -682,9 +694,9 @@ describe("Hook Ordering Integration", () => {
       
       const hooks = registry.getHooksByTier("continuation")
       
-      expect(hooks[0].name).toBe("negative")
-      expect(hooks[1].name).toBe("zero")
-      expect(hooks[2].name).toBe("positive")
+      expect(String(hooks[0].name)).toBe("negative")
+      expect(String(hooks[1].name)).toBe("zero")
+      expect(String(hooks[2].name)).toBe("positive")
     })
 
     it("should handle same hook registered multiple times", () => {

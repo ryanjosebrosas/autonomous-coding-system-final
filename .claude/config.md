@@ -12,11 +12,11 @@
 
 These commands are used by `/planning`, `/final-review`, `/code-loop`, and other pipeline commands.
 
-- **L1 Lint**: not detected — no eslint config found
-- **L1 Format**: not detected — no prettier config found
-- **L2 Types**: not detected — no tsconfig.json found at root
-- **L3 Unit Tests**: not detected — no jest or vitest config found
-- **L4 Integration Tests**: not detected
+- **L1 Lint**: npx eslint .opencode/
+- **L1 Format**: npx prettier --check .opencode/
+- **L2 Types**: npx tsc --noEmit
+- **L3 Unit Tests**: npx vitest run
+- **L4 Integration Tests**: npx vitest run .opencode/tests/integration/
 - **L5 Manual**: Code review via /code-loop
 
 ## Source Directories

@@ -9,11 +9,18 @@
  * - Abort detection and recovery
  */
 
-import { describe, it, expect, beforeEach, mock } from "bun:test"
+import { describe, it, expect, beforeEach, vi } from "vitest"
 import { createTodoContinuationEnforcer } from "../../../hooks/todo-continuation"
 import { createSessionStateStore } from "../../../hooks/todo-continuation/session-state"
-import type { Todo, SessionState, SessionStateStore, TodoContinuationEnforcerOptions } from "../../../hooks/todo-continuation/types"
+import type { Todo, SessionState, SessionStateStore, TodoContinuationPluginInput } from "../../../hooks/todo-continuation/types"
 import { HOOK_NAME, DEFAULT_SKIP_AGENTS, COUNTDOWN_DELAY_MS, INJECTION_COOLDOWN_MS } from "../../../hooks/todo-continuation/constants"
+
+// Local type for test options
+interface TodoContinuationEnforcerOptions {
+  backgroundManager?: unknown
+  skipAgents?: string[]
+  isContinuationStopped?: (sessionID: string) => boolean
+}
 
 // ============================================================
 // MOCK HELPERS
@@ -22,17 +29,9 @@ import { HOOK_NAME, DEFAULT_SKIP_AGENTS, COUNTDOWN_DELAY_MS, INJECTION_COOLDOWN_
 /**
  * Create a mock plugin context with configurable todo responses.
  */
-function createMockContext(todos: Todo[] = []): { 
-  client: { 
-    session: { 
-      todo: ReturnType<typeof mock<() => Promise<{ data: Todo[] }>>>
-      prompt: ReturnType<typeof mock<() => Promise<void>>>
-    } 
-  }
-  directory: string 
-} {
-  const todoMock = mock(async () => ({ data: todos }))
-  const promptMock = mock(async () => {})
+function createMockContext(todos: Todo[] = []): TodoContinuationPluginInput {
+  const todoMock = vi.fn(async () => ({ data: todos })) as any
+  const promptMock = vi.fn(async () => {}) as any
   
   return {
     client: {
