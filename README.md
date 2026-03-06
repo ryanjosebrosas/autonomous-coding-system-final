@@ -664,6 +664,22 @@ opencode run "/execute .agents/features/user-auth/plan.md"
 
 Use this exact sequence for a new project adopting the framework.
 
+**Step 0: Install oh-my-opencode (once per machine)**
+
+This framework runs on top of [oh-my-opencode](https://github.com/code-yeongyu/oh-my-opencode) — the multi-agent harness that powers OpenCode with orchestration, model routing, and hook support.
+
+```bash
+bunx oh-my-opencode install
+```
+
+Follow the prompts to configure your model providers (Claude, OpenAI, Gemini, etc.). Then clone this repo into your project directory — OpenCode picks up `AGENTS.md` and `.opencode/` automatically on launch.
+
+```bash
+git clone https://github.com/ryanjosebrosas/autonomous-coding-system-final.git
+cd autonomous-coding-system-final
+opencode   # starts the TUI with the full system loaded
+```
+
 **Step 1: Start every session with /prime**
 
 ```bash
