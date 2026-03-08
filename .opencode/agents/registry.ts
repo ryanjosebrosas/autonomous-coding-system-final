@@ -72,6 +72,14 @@ export const PERMISSIONS = {
     grep: false,
     task: false,
   },
+  orchestratorOnly: {
+    readFile: true,
+    writeFile: false,
+    editFile: false,
+    bash: false,
+    grep: true,
+    task: true, // Can ONLY delegate
+  },
 } as const
 
 // ============================================================================
@@ -111,7 +119,7 @@ export const AGENT_REGISTRY: Record<string, AgentMetadata> = {
     model: "anthropic/claude-sonnet-4-6",
     temperature: 0.1,
     mode: "all",
-    permissions: PERMISSIONS.full,
+    permissions: PERMISSIONS.orchestratorOnly,
     fallbackChain: FALLBACK_CHAINS.sisyphus,
     deniedTools: [],
   },
