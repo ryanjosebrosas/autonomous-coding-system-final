@@ -491,7 +491,7 @@ If a task decomposes into 4 independent units, spawn 4 agents simultaneously —
 
 | Agent | Display Name | Model | Temp | Mode | Permissions | Category | Purpose |
 |-------|--------------|-------|------|------|-------------|----------|---------|
-| `sisyphus` | Sisyphus — Main Orchestrator | claude-sonnet-4-6 | 0.1 | all | full | unspecified-high | Primary orchestrator: workflow management, delegation, session continuity |
+| `sisyphus` | Sisyphus — Main Orchestrator | claude-opus-4-6 | 0.1 | all | orchestrator-only | unspecified-high | Primary orchestrator: workflow management, delegation, session continuity |
 | `hephaestus` | Hephaestus — Deep Autonomous Worker | gpt-5.3-codex | 0.1 | all | full | ultrabrain | Autonomous problem-solver for genuinely difficult, logic-heavy tasks |
 | `atlas` | Atlas — Todo List Conductor | glm-5:cloud | 0.1 | primary | full-no-task | writing | Todo management, progress tracking, wisdom accumulation |
 | `oracle` | Oracle — Architecture Consultant | claude-sonnet-4-6 | 0.1 | subagent | read-only | ultrabrain | Read-only architecture consultation, debugging help, tradeoffs |
@@ -500,6 +500,7 @@ If a task decomposes into 4 independent units, spawn 4 agents simultaneously —
 | `sisyphus-junior` | Sisyphus-Junior — Category Executor | gpt-5.3-codex | 0.1 | all | full-no-task | inherited | Category-dispatched executor with MUST DO/MUST NOT DO constraints |
 | `librarian` | Librarian — External Documentation | glm-5:cloud | 0.1 | subagent | read-only | writing | External documentation search, implementation examples from OSS |
 | `explore` | Explore — Internal Codebase Grep | glm-5:cloud | 0.1 | subagent | read-only | deep | Fast internal codebase grep, pattern discovery, file location |
+| `prime-agent` | Prime Agent — Context Loader | glm-5:cloud | 0.1 | subagent | read-only+bash | unspecified-low | Lightweight context loading for /prime command |
 | `multimodal-looker` | Multimodal-Looker — PDF/Image Analysis | gemini-3-flash-preview | 0.1 | subagent | vision-only | unspecified-low | PDF/image analysis, diagram interpretation, visual content extraction |
 
 ### Permission Levels
@@ -508,6 +509,7 @@ If a task decomposes into 4 independent units, spawn 4 agents simultaneously —
 |-------|----------|-----------|----------|------|------|------|-----------------|
 | `full` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `full-no-task` | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ |
+| `orchestrator-only` | ✓ | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ |
 | `read-only` | ✓ | ✗ | ✗ | ✗ | ✓ | ✗ | ✗ |
 | `vision-only` | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
 
@@ -523,7 +525,7 @@ If a task decomposes into 4 independent units, spawn 4 agents simultaneously —
 
 | Agent | Primary Model | Fallback |
 |-------|---------------|----------|
-| sisyphus | claude-sonnet-4-6 | glm-5:cloud |
+| sisyphus | claude-opus-4-6 | glm-5:cloud |
 | hephaestus | gpt-5.3-codex | glm-5:cloud |
 | oracle | claude-sonnet-4-6 | glm-5:cloud |
 | librarian | glm-5:cloud | glm-5:cloud |

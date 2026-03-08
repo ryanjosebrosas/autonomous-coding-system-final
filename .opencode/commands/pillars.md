@@ -1,6 +1,5 @@
 ---
 description: Analyze PRD and identify infrastructure pillars with dependency order and gate criteria
-model: anthropic/claude-opus-4-6
 argument-hint: [focus area or pillar name]
 ---
 

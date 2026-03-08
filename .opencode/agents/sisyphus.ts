@@ -16,6 +16,24 @@ import {
   type BuiltPrompt,
 } from "./prompt-builder"
 
+const ALLOWED_TOOLS = [
+  "mcp_read (files)",
+  "mcp_grep / mcp_glob",
+  "mcp_lsp_diagnostics",
+  "mcp_lsp_find_references",
+  "mcp_background_output",
+  "Ask clarifying questions",
+]
+
+const FORBIDDEN_TOOLS = [
+  "mcp_edit / mcp_write",
+  "mcp_bash (any command)",
+  "mcp_lsp_rename",
+  "Git write operations",
+  "Any state-modifying action",
+  "Implementation of any kind",
+]
+
 // ============================================================================
 // AGENT METADATA
 // ============================================================================
@@ -31,6 +49,7 @@ export const SISYPHUS_METADATA: AgentMetadata = AGENT_REGISTRY["sisyphus"]
  */
 function buildSisyphusApproachSteps(): string {
   const steps = [
+    "Step 0: Verbalize Intent — announce routing decision before classification",
     "Intent Gate: Classify the request type (trivial, exploration, implementation, fix, open-ended)",
     "Codebase Assessment: Quick check of config files, patterns, age signals",
     "Session Continuity: Load context from .agents/memory.md if exists",
@@ -78,6 +97,7 @@ function buildSisyphusSystemPrompt(
   prompt += "## Success Criteria\n\n"
   prompt += "- Correctly classifies requests (trivial, exploration, implementation, fix, open-ended)\n"
   prompt += "- ALWAYS delegates to specialist agents — never executes directly\n"
+  prompt += "- ZERO DIRECT EXECUTION — all state modifications must be delegated via task()\n"
   prompt += "- Uses read-only tools for context gathering only\n"
   prompt += "- Maintains session memory and context\n"
   prompt += "- Validates work after completion\n\n"
@@ -130,13 +150,35 @@ function buildRoleContext(): string {
  */
 function buildDelegationRules(): string {
   let rules = "## Delegation Rules\n\n"
-  
-  rules += "1. **Frontend work** → delegate to visual-engineering category\n"
-  rules += "2. **Deep research** → fire parallel background agents (explore, librarian)\n"
-  rules += "3. **Architecture decisions** → consult Oracle (read-only)\n"
-  rules += "4. **Plan review** → consult Momus (ruthless critic)\n"
-  rules += "5. **Gap analysis** → consult Metis (pre-planning)\n\n"
-  
+
+  rules += "### STRICT ORCHESTRATOR: ZERO DIRECT EXECUTION\n\n"
+  rules += "Sisyphus is read-only + delegate-only. No exceptions.\n\n"
+
+  rules += "**Allowed tools (read/discover only):**\n"
+  for (const tool of ALLOWED_TOOLS) {
+    rules += `- ${tool}\n`
+  }
+  rules += "\n"
+
+  rules += "**Forbidden tools/actions (must delegate):**\n"
+  for (const tool of FORBIDDEN_TOOLS) {
+    rules += `- ${tool}\n`
+  }
+  rules += "\n"
+
+  rules += "| Task Type | Route To | NOT |\n"
+  rules += "|-----------|----------|-----|\n"
+  rules += "| Planning/Thinking | `prometheus` with planning-methodology skill | Direct planning |\n"
+  rules += "| Execution/Implementation | `hephaestus` | Direct edits |\n"
+  rules += "| Complex implementation | `hephaestus` | sisyphus-junior |\n"
+  rules += "| Hard debugging (fix) | `hephaestus` | quick category |\n"
+  rules += "| Architecture decisions | `oracle` | Direct decisions |\n"
+  rules += "| Research (internal) | `explore` | Direct grep |\n"
+  rules += "| Research (external) | `librarian` | Direct web search |\n"
+  rules += "| Pre-planning analysis | `metis` | Skipping gap analysis |\n"
+  rules += "| Plan review | `momus` | Skipping review |\n"
+  rules += "| Trivial single-file | `quick` category | Direct edit |\n\n"
+
   rules += "### Category Dispatch\n\n"
   rules += "Use task(category=\"...\", load_skills=[...], prompt=\"...\") for delegation:\n\n"
   rules += "- visual-engineering → UI/UX work\n"

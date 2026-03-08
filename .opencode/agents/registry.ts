@@ -101,6 +101,7 @@ export const FALLBACK_CHAINS = {
   prometheus: ["ollama/glm-5:cloud"],
   multimodalLooker: ["ollama/glm-5:cloud"],
   tmuxMaster: ["ollama/glm-5:cloud"],
+  primeAgent: ["ollama/glm-5:cloud"],
 
   // Inherited from category dispatch
   sisyphusJunior: [],
@@ -263,6 +264,26 @@ export const AGENT_REGISTRY: Record<string, AgentMetadata> = {
     deniedTools: ["write", "edit", "read", "grep", "task", "call_omo_agent"],
   },
 
+  "prime-agent": {
+    name: "prime-agent",
+    displayName: "Prime Agent — Context Loader",
+    description: "Lightweight context loading agent for /prime command. Gathers git state, stack detection, pipeline status, memory context.",
+    category: "unspecified-low",
+    model: "ollama/glm-5:cloud",
+    temperature: 0.1,
+    mode: "subagent",
+    permissions: {
+      readFile: true,
+      writeFile: false,
+      editFile: false,
+      bash: true,
+      grep: true,
+      task: false,
+    },
+    fallbackChain: FALLBACK_CHAINS.primeAgent,
+    deniedTools: ["write", "edit", "task", "call_omo_agent"],
+  },
+
   "multimodal-looker": {
     name: "multimodal-looker",
     displayName: "Multimodal-Looker — PDF/Image Analysis",
@@ -326,6 +347,7 @@ export const AGENT_NAMES: AgentName[] = [
   "sisyphus-junior",
   "librarian",
   "explore",
-  "multimodal-looker",
   "tmux-master",
+  "prime-agent",
+  "multimodal-looker",
 ] as const

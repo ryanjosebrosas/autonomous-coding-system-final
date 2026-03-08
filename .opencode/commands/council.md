@@ -1,6 +1,5 @@
 ---
 description: Run a multi-perspective council discussion on the given topic
-model: openai/gpt-5.3-codex
 ---
 
 # Council

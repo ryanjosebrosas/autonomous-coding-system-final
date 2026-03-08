@@ -1,6 +1,5 @@
 ---
 description: Final review gate — summarize all changes, verify acceptance criteria, get human approval before commit
-model: openai/gpt-5.3-codex
 ---
 
 # Final Review: Pre-Commit Approval Gate

@@ -1,6 +1,5 @@
 ---
 description: Create a full Product Requirements Document with architecture, tech specs, and backend design
-model: anthropic/claude-opus-4-6
 argument-hint: [output-filename]
 ---
 

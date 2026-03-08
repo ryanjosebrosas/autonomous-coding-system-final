@@ -20,7 +20,7 @@ import { getPermissionLevel, getPermissions, canUseTool } from "./permissions"
  */
 const EXPECTED_AGENT_MODELS: Record<string, string> = {
   // Overridden in oh-my-opencode.jsonc
-  sisyphus: "anthropic/claude-sonnet-4-6",
+  sisyphus: "anthropic/claude-opus-4-6",
   hephaestus: "openai/gpt-5.3-codex",
   oracle: "anthropic/claude-opus-4-6",
   metis: "anthropic/claude-sonnet-4-6",
@@ -97,18 +97,21 @@ describe("Agent Registry", () => {
   })
 
   describe("getAllAgentNames", () => {
-    it("should return all 10 agent names", () => {
+    it("should return all registered agent names", () => {
       const names = getAllAgentNames()
-      expect(names.length).toBe(10)
+      expect(names.length).toBe(13)
       expect(names).toContain("sisyphus")
       expect(names).toContain("hephaestus")
       expect(names).toContain("oracle")
       expect(names).toContain("metis")
       expect(names).toContain("momus")
       expect(names).toContain("atlas")
+      expect(names).toContain("prometheus")
       expect(names).toContain("sisyphus-junior")
       expect(names).toContain("librarian")
       expect(names).toContain("explore")
+      expect(names).toContain("tmux-master")
+      expect(names).toContain("prime-agent")
       expect(names).toContain("multimodal-looker")
     })
   })
@@ -186,8 +189,8 @@ describe("Agent Resolution", () => {
   })
 
   describe("hasPermission", () => {
-    it("should allow full agents to write", () => {
-      expect(hasPermission("sisyphus", "write")).toBe(true)
+    it("should enforce write permissions by agent preset", () => {
+      expect(hasPermission("sisyphus", "write")).toBe(false)
       expect(hasPermission("hephaestus", "edit")).toBe(true)
     })
 
@@ -315,10 +318,9 @@ describe("oh-my-opencode.jsonc — Model Verification", () => {
       expect(momus?.model).toContain("opus")
     })
 
-    it("sisyphus registry model should match 'sonnet' (overridden from opus → sonnet)", () => {
-      // Registry has claude-opus-4-5, but oh-my-opencode.jsonc overrides to sonnet
+    it("sisyphus override should match registry model", () => {
       const configured = config.agents["sisyphus"]?.model
-      expect(configured).toContain("sonnet")
+      expect(configured).toBe("anthropic/claude-opus-4-6")
     })
 
     it("oracle and momus should be on claude-opus-4-6 (migrated from 4-5)", () => {

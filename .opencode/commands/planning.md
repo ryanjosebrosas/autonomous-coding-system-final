@@ -1,6 +1,5 @@
 ---
 description: Interactive discovery session — explore ideas WITH the user, then produce a structured plan
-model: anthropic/claude-opus-4-6
 ---
 
 # Planning: Interactive Discovery + Structured Plan

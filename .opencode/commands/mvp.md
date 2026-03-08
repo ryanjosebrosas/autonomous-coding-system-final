@@ -1,6 +1,5 @@
 ---
 description: Define or refine the product MVP vision through interactive big-idea discovery
-model: anthropic/claude-opus-4-6
 ---
 
 # MVP: Big Idea Discovery
